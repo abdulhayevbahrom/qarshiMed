@@ -18,7 +18,7 @@ app.use(express.json());
 
 // CORS sozlamalari
 const corsOptions = {
-  origin: ["https://sumka-front.vercel.app", "http://localhost:3000"],
+  origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
 };
