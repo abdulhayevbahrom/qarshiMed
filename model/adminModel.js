@@ -30,7 +30,7 @@ const AdminSchema = new mongoose.Schema(
     role: {
       type: String,
       default: "admin",
-      enum: ["admin", "director", "doctor"],
+      enum: ["reception", "director", "doctor"],
     },
     permissions: {
       type: [String],
@@ -48,4 +48,4 @@ const AdminSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Admin", AdminSchema);
+module.exports = mongoose.model("Admins", AdminSchema);
