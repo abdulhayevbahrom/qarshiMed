@@ -79,8 +79,7 @@ class AdminController {
   async createAdmin(req, res) {
     try {
       let io = req.app.get("socket");
-      const { firstName, lastName, login, password, role, permissions } =
-        req.body;
+      const { login, password, permissions } = req.body;
 
       // Login takrorlanmasligini tekshirish
       const existingAdmin = await adminsDB.findOne({ login });
