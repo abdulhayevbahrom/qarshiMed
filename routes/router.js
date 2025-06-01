@@ -4,6 +4,7 @@ const adminValidation = require("../validation/adminValidation");
 
 router.post("/admin/login", adminController.login);
 router.get("/admin/all", adminController.getAdmins);
+router.get("/admin/for_reception", adminController.getAdminsForReception);
 router.get("/admin/:id", adminController.getAdminById);
 router.post("/admin/create", adminValidation, adminController.createAdmin);
 router.put("/admin/update/:id", adminValidation, adminController.updateAdmin);
