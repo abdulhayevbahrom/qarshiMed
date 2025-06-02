@@ -52,6 +52,21 @@ class StoryController {
       return response.serverError(res, err.message, err);
     }
   }
+
+  // get today story
+  async getTodaysStory(req, res) {
+    try {
+      const today = new Date();
+      const stories = await storyDB
+        .find({ createdAt: { $gte: today }, view: false })
+        .sort({ createdAt: -1 })
+        .populate("patientId");
+      if (!stories.length) return response.notFound(res, "Bemorlar topilmadi");
+      return response.success(res, "Bemorlar topildi", stories);
+    } catch (err) {
+      return response.serverError(res, err.message, err);
+    }
+  }
 }
 
 module.exports = new StoryController();

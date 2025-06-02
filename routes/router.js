@@ -23,6 +23,7 @@ router.get("/story/all", storyController.getStory);
 router.get("/story/patient/:id", storyController.getStoryByPatientId);
 router.get("/story/doctor/:id", storyController.getStoryByDoctorId);
 router.put("/story/update/:id", storyController.updateStory);
+router.get("/story/todays", storyController.getTodaysStory);
 
 // clinicInfo
 // ...existing code...
@@ -32,8 +33,5 @@ const clinicInfoValidation = require("../validation/clinicInfoValidation");
 router.post("/clinic/create", clinicInfoValidation, ClinicInfoController.createClinicInfo);
 router.put("/clinic/update/:id", ClinicInfoController.updateClinicInfo);
 router.get("/clinic/info", ClinicInfoController.getClinicInfo);
-
-// ...existing code...
-module.exports = router;
 
 module.exports = router;
