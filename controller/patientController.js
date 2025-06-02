@@ -1,6 +1,7 @@
 const response = require("../utils/response");
 const patientsDB = require("../model/patientModel");
 const storyDB = require("../model/storyModel");
+const adminDB = require('../model/adminModel')
 
 class PatientController {
   async createPatient(req, res) {
@@ -14,7 +15,6 @@ class PatientController {
         year,
         gender,
         paymentType,
-        payment_status,
         payment_amount,
       } = req.body;
       // Telefon raqami orqali bemorni qidirish
@@ -50,13 +50,14 @@ class PatientController {
       // order_number = navbat raqami
       const order_number = count + 1;
 
+      let doctor = await adminDB.findById(doctorId)
       // Story yaratish
       const story = await storyDB.create({
         patientId: patient._id,
         doctorId,
         order_number,
         paymentType,
-        payment_status,
+        payment_status: doctor,
         payment_amount,
       });
 
