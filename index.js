@@ -1,6 +1,8 @@
 require("dotenv").config();
 const express = require("express");
-const { connect } = require("mongoose");
+// const { connect } = require("mongoose");
+const connectDB = require("./config/dbConfig"); // yoki ./utils/connect
+
 const cors = require("cors");
 const PORT = process.env.PORT || 5000;
 const notfound = require("./middleware/notfound.middleware");
@@ -25,10 +27,14 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // MongoDB ulanish
+// (async () => {
+//   await connect(process.env.MONGO_URI)
+//     .then(() => console.log("MongoDBga ulanish muvaffaqiyatli! ✅✅✅"))
+//     .catch((err) => console.log("MongoDB ulanish xatosi: 🛑🛑🛑", err));
+// })();
+
 (async () => {
-  await connect(process.env.MONGO_URI)
-    .then(() => console.log("MongoDBga ulanish muvaffaqiyatli! ✅✅✅"))
-    .catch((err) => console.log("MongoDB ulanish xatosi: 🛑🛑🛑", err));
+  await connectDB();
 })();
 
 // Socket.IO sozlamalari
