@@ -24,4 +24,16 @@ router.get("/story/patient/:id", storyController.getStoryByPatientId);
 router.get("/story/doctor/:id", storyController.getStoryByDoctorId);
 router.put("/story/update/:id", storyController.updateStory);
 
+// clinicInfo
+// ...existing code...
+const ClinicInfoController = require("../controller/clinicInfoController");
+const clinicInfoValidation = require("../validation/clinicInfoValidation");
+
+router.post("/clinic/create", clinicInfoValidation, ClinicInfoController.createClinicInfo);
+router.put("/clinic/update/:id", ClinicInfoController.updateClinicInfo);
+router.get("/clinic/info", ClinicInfoController.getClinicInfo);
+
+// ...existing code...
+module.exports = router;
+
 module.exports = router;
