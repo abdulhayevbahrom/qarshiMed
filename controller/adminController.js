@@ -1,5 +1,6 @@
 const response = require("../utils/response");
 const adminsDB = require("../model/adminModel");
+const storiesDB = require("../model/storyModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
@@ -10,6 +11,55 @@ class AdminController {
       const admins = await adminsDB.find().select("-password"); // Parolni chiqarmaslik uchun
       if (!admins.length) return response.notFound(res, "Adminlar topilmadi");
       response.success(res, "Barcha adminlar", admins);
+    } catch (err) {
+      response.serverError(res, err.message, err);
+    }
+  }
+
+  async getAdminsForReception(req, res) {
+    try {
+      // Bugungi sana chegaralari
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+
+      // Aggregation orqali doctorlar va bugungi navbat soni
+      const result = await adminsDB.aggregate([
+        { $match: { role: "doctor" } },
+        {
+          $lookup: {
+            from: "stories",
+            let: { doctorId: "$_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ["$doctorId", "$$doctorId"] },
+                      { $eq: ["$view", false] },
+                      { $gte: ["$createdAt", today] },
+                      { $lt: ["$createdAt", tomorrow] },
+                    ],
+                  },
+                },
+              },
+            ],
+            as: "todayStories",
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            firstName: 1,
+            lastName: 1,
+            todayQueue: { $size: "$todayStories" },
+          },
+        },
+      ]);
+
+      if (!result.length) return response.notFound(res, "Adminlar topilmadi");
+      response.success(res, "Barcha adminlar", result);
     } catch (err) {
       response.serverError(res, err.message, err);
     }
@@ -29,8 +79,7 @@ class AdminController {
   async createAdmin(req, res) {
     try {
       let io = req.app.get("socket");
-      const { firstName, lastName, login, password, role, permissions } =
-        req.body;
+      const { login, password, permissions } = req.body;
 
       // Login takrorlanmasligini tekshirish
       const existingAdmin = await adminsDB.findOne({ login });

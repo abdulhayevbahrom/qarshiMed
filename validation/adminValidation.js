@@ -36,6 +36,17 @@ const adminValidation = (req, res, next) => {
       specialization: {
         type: "string",
       },
+      phone: {
+        type: String,
+        required: true,
+      },
+      admission_price: {
+        type: Number,
+        default: 0,
+      },
+      birthday: {
+        type: Date,
+      },
     },
     required: ["firstName", "lastName", "login", "password"],
     additionalProperties: false,
@@ -49,6 +60,9 @@ const adminValidation = (req, res, next) => {
         permissions: "Ruxsatlar kiritish shart",
         salary_per_month: "Oylik maosh kiritish shart",
         specialization: "Yo'nalishi kiritish shart",
+        phone: "Telefon raqam kiritish shart",
+        admission_price: "Qabul narxi kiritish shart",
+        birthday: "Tug‘ulgan kun kiritish shart",
       },
       properties: {
         firstName: "Ism 2-50 ta belgi oralig‘ida bo‘lishi kerak",
@@ -61,6 +75,9 @@ const adminValidation = (req, res, next) => {
           "Permissions — takrorlanmagan stringlar ro‘yxati bo‘lishi kerak",
         salary_per_month: "Oylik maosh son bo‘lishi kerak",
         specialization: "Yo'nalishi kiritish shart",
+        phone: "Telefon raqam kiritish shart",
+        admission_price: "Qabul narxi son bo‘lishi kerak",
+        birthday: "Tug‘ulgan kun kiritish shart",
       },
       additionalProperties: "Ruxsat etilmagan maydon kiritildi",
     },

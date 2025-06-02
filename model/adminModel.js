@@ -44,6 +44,17 @@ const AdminSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    phone: {
+      type: String,
+      required: true,
+    },
+    admission_price: {
+      type: Number,
+      default: 0,
+    },
+    birthday: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );

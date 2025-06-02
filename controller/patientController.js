@@ -1,7 +1,7 @@
 const response = require("../utils/response");
 const patientsDB = require("../model/patientModel");
 const storyDB = require("../model/storyModel");
-const adminDB = require('../model/adminModel')
+const adminDB = require("../model/adminModel");
 
 class PatientController {
   async createPatient(req, res) {
@@ -50,21 +50,35 @@ class PatientController {
       // order_number = navbat raqami
       const order_number = count + 1;
 
-      let doctor = await adminDB.findById(doctorId)
+      let doctor = await adminDB.findById(doctorId);  
+
       // Story yaratish
       const story = await storyDB.create({
         patientId: patient._id,
         doctorId,
         order_number,
         paymentType,
-        payment_status: doctor,
+        payment_status: doctor.admission_price === payment_amount,
         payment_amount,
       });
 
       return response.success(res, "Bemor va story yaratildi", {
-        patient,
-        story,
-        order_number,
+        patient: {
+          firstname,
+          lastname,
+          phone,
+          idNumber,
+          address,
+          order_number,
+          cretedAt: story.createdAt,
+        },
+        doctor: {
+          firstname: doctor.firstName,
+          lastname: doctor.lastName,
+          specialization: doctor.specialization,
+          phone: doctor.phone,
+          admission_price: doctor.admission_price,
+        },
       });
     } catch (err) {
       return response.serverError(res, err.message, err);
