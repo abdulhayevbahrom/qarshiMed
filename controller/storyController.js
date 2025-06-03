@@ -8,7 +8,8 @@ class StoryController {
       const stories = await storyDB
         .find()
         .sort({ createdAt: -1 })
-        .populate("patientId");
+        .populate("patientId")
+        .populate("doctorId");
       if (!stories.length) return response.notFound(res, "Bemorlar topilmadi");
       return response.success(res, "Success", stories);
     } catch (err) {
@@ -21,7 +22,8 @@ class StoryController {
       const stories = await storyDB
         .find({ patientId: req.params.id })
         .sort({ createdAt: -1 })
-        .populate("patientId");
+        .populate("patientId")
+        .populate("doctorId");
       if (!stories.length) return response.notFound(res, "Bemorlar topilmadi");
       return response.success(res, "Bemor topildi", stories);
     } catch (err) {
@@ -34,7 +36,8 @@ class StoryController {
       const stories = await storyDB
         .find({ doctorId: req.params.id })
         .sort({ createdAt: -1 })
-        .populate("patientId");
+        .populate("patientId")
+        .populate("doctorId");
       if (!stories.length) return response.notFound(res, "Bemorlar topilmadi");
       return response.success(res, "Bemor topildi", stories);
     } catch (err) {
