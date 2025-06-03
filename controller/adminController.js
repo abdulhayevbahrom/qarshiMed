@@ -182,7 +182,7 @@ class AdminController {
       const token = jwt.sign(
         { id: admin._id, login: admin.login },
         process.env.JWT_SECRET_KEY,
-        { expiresIn: "1d" }
+        { expiresIn: "1w" }
       );
 
       const adminData = admin.toJSON();

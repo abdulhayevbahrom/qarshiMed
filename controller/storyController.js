@@ -1,5 +1,6 @@
 const response = require("../utils/response");
 const storyDB = require("../model/storyModel");
+const moment = require("moment");
 
 class StoryController {
   async getStory(req, res) {
@@ -53,14 +54,22 @@ class StoryController {
     }
   }
 
-  // get today story
   async getTodaysStory(req, res) {
     try {
-      const today = new Date();
+      const startOfDay = moment().startOf("day").toDate();
+      const endOfDay = moment().endOf("day").toDate();
+
       const stories = await storyDB
-        .find({ createdAt: { $gte: today }, view: false })
+        .find({
+          createdAt: { $gte: startOfDay, $lte: endOfDay },
+          view: false,
+        })
         .sort({ createdAt: -1 })
-        .populate("patientId");
+        .populate("patientId")
+        .populate("doctorId");
+
+      console.log(stories.length);
+
       if (!stories.length) return response.notFound(res, "Bemorlar topilmadi");
       return response.success(res, "Bemorlar topildi", stories);
     } catch (err) {
