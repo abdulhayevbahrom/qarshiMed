@@ -29,9 +29,26 @@ router.get("/story/todays", storyController.getTodaysStory);
 // ...existing code...
 const ClinicInfoController = require("../controller/clinicInfoController");
 const clinicInfoValidation = require("../validation/clinicInfoValidation");
-
 router.post("/clinic/create", clinicInfoValidation, ClinicInfoController.createClinicInfo);
 router.put("/clinic/update/:id", ClinicInfoController.updateClinicInfo);
 router.get("/clinic/info", ClinicInfoController.getClinicInfo);
+
+
+// room
+const roomController = require("../controller/roomController");
+const roomValidation = require("../validation/roomValidation");
+
+router.post("/room/create", roomValidation, roomController.createRoom);
+router.get("/room/all", roomController.getRooms);
+router.get("/room/stories", roomController.getRoomStories); // avval stories
+router.get("/room/:id", roomController.getRoomById);        // keyin :id
+router.put("/room/update/:id", roomValidation, roomController.updateRoom);
+router.delete("/room/delete/:id", roomController.deleteRoom);
+router.patch("/room/closeRoom/:id", roomController.closeRoom);
+router.patch("/room/addPatient/:id", roomController.addPatientToRoom);
+router.post("/room/removePatient/:id", roomController.removePatientFromRoom);
+router.post("/room/pay", roomController.payForRoom);
+
+
 
 module.exports = router;

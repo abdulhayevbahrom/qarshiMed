@@ -3,14 +3,50 @@ const storyDB = require("../model/storyModel");
 const moment = require("moment");
 
 class StoryController {
+  // async getStory(req, res) {
+  //   try {
+  //     const stories = await storyDB
+  //       .find()
+  //       .sort({ createdAt: -1 })
+  //       .populate("patientId")
+  //       .populate("doctorId");
+  //     if (!stories.length) return response.notFound(res, "Bemorlar topilmadi");
+  //     return response.success(res, "Success", stories);
+  //   } catch (err) {
+  //     return response.serverError(res, err.message, err);
+  //   }
+  // }
+
   async getStory(req, res) {
     try {
+      let filter = {};
+      let startDay, endDay;
+
+      if (req.query.startDay && req.query.endDay) {
+        // Agar frontenddan startDay va endDay kelsa, shu oraliqni olamiz
+        startDay = new Date(req.query.startDay);
+        startDay.setHours(0, 0, 0, 0);
+        endDay = new Date(req.query.endDay);
+        endDay.setHours(23, 59, 59, 999);
+      } else {
+        // Aks holda, oxirgi 7 kunni olamiz
+        endDay = new Date();
+        endDay.setHours(23, 59, 59, 999);
+        startDay = new Date();
+        startDay.setDate(endDay.getDate() - 6);
+        startDay.setHours(0, 0, 0, 0);
+      }
+
+      filter.createdAt = { $gte: startDay, $lte: endDay };
+
       const stories = await storyDB
-        .find()
+        .find(filter)
         .sort({ createdAt: -1 })
         .populate("patientId")
         .populate("doctorId");
+
       if (!stories.length) return response.notFound(res, "Bemorlar topilmadi");
+
       return response.success(res, "Success", stories);
     } catch (err) {
       return response.serverError(res, err.message, err);
