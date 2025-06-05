@@ -12,7 +12,11 @@ const roomStorySchema = new mongoose.Schema(
       ref: "Room",
       required: true,
     },
-    startDay: { type: String,  default:new Date() },
+    doctorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admins",
+    },
+    startDay: { type: String, default: new Date() },
     endDay: { type: String, default: "0" },
     paidDays: [
       {
@@ -25,6 +29,7 @@ const roomStorySchema = new mongoose.Schema(
     payments: [
       {
         amount: Number,
+        paymentType: String,
         date: { type: Date, default: Date.now },
       },
     ],

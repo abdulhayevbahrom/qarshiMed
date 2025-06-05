@@ -1,10 +1,17 @@
 const Room = require("../model/roomModel");
 const response = require("../utils/response");
 const RoomStory = require("../model/roomStoryModel");
+const Expense = require("../model/expenseModel");
 const mongoose = require("mongoose");
+
 class RoomController {
   async createRoom(req, res) {
     try {
+      const roomNumber = req.body.roomNumber;
+      const exist_room = await Room.findOne({ roomNumber });
+      if (exist_room) {
+        return response.error(res, "Xona raqami band");
+      }
       const room = await Room.create(req.body);
       if (!room) return response.notFound(res, "Xona yaratilmadi");
       return response.success(res, "Xona yaratildi", room);
@@ -16,7 +23,10 @@ class RoomController {
   // Barcha xonalarni olish
   async getRooms(req, res) {
     try {
-      const rooms = await Room.find().populate("capacity");
+      const rooms = await Room.find().populate({
+        path: "capacity",
+        populate: [{ path: "patientId" }, { path: "doctorId" }],
+      });
       if (!rooms.length) return response.notFound(res, "Xonalar topilmadi");
       return response.success(res, "Xonalar ro'yxati", rooms);
     } catch (err) {
@@ -78,7 +88,7 @@ class RoomController {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-      const { patientId, treatingDays } = req.body;
+      const { patientId, treatingDays, doctorId } = req.body;
       if (!patientId) {
         await session.abortTransaction();
         session.endSession();
@@ -95,17 +105,18 @@ class RoomController {
         return response.error(res, "Bemor _id si noto'g'ri yuborildi");
       }
 
-      // Boshqa xonalarda ham bor-yo‘qligini tekshirish
-      const existsInOtherRoom = await Room.findOne({
-        capacity: patientId,
-        _id: { $ne: req.params.id },
+      // Boshqa xonalarda ham bor-yo‘qligini tekshirish (faol RoomStory orqali)
+      const existsInOtherRoomStory = await RoomStory.findOne({
+        patientId,
+        active: true,
+        roomId: { $ne: req.params.id },
       }).session(session);
-      if (existsInOtherRoom) {
+      if (existsInOtherRoomStory) {
         await session.abortTransaction();
         session.endSession();
         return response.error(
           res,
-          `Bu bemor ${existsInOtherRoom.roomNumber}-xonada mavjud`
+          `Bu bemor boshqa xonada faol: ${existsInOtherRoomStory.roomId}`
         );
       }
 
@@ -116,23 +127,14 @@ class RoomController {
         return response.notFound(res, "Xona topilmadi");
       }
 
-      if (room.capacity.includes(patientId)) {
-        await session.abortTransaction();
-        session.endSession();
-        return response.error(res, "Bu bemor allaqachon ushbu honada");
-      }
-
+      // Xonada joy borligini tekshirish
       if (room.capacity.length >= room.usersNumber) {
         await session.abortTransaction();
         session.endSession();
         return response.error(res, "Xonada bo'sh joy yo'q");
       }
 
-      // 1. Bemorni capacity ga qo'shish
-      room.capacity.push(patientId);
-      await room.save({ session });
-
-      // 2. paidDays massivini avtomatik yaratish
+      // 1. paidDays massivini avtomatik yaratish
       const paidDays = [];
       const today = require("moment")();
       for (let i = 0; i < treatingDays; i++) {
@@ -144,12 +146,13 @@ class RoomController {
         });
       }
 
-      // 3. RoomStory ochish
-      const roomStory = await RoomStory.create(
+      // 2. RoomStory ochish
+      const [roomStory] = await RoomStory.create(
         [
           {
             patientId,
             roomId: room._id,
+            doctorId,
             startDay: today.format("DD.MM.YYYY HH:mm"),
             paidDays,
             payments: [],
@@ -159,15 +162,19 @@ class RoomController {
         { session }
       );
 
+      // 3. Room capacity ga roomStory._id ni qo'shish
+      room.capacity.push(roomStory._id);
+      await room.save({ session });
+
       await session.commitTransaction();
       session.endSession();
 
       return response.success(
         res,
-        "Bemor xonaga biriktirildi va roomStory yaratildi",
+        "Bemor xonaga biriktirildi",
         {
           room,
-          roomStory: roomStory[0],
+          roomStory,
         }
       );
     } catch (err) {
@@ -261,7 +268,7 @@ class RoomController {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-      const { patientId, amount } = req.body;
+      const { patientId, amount, paymentType } = req.body;
       if (!patientId || !amount)
         return response.error(res, "Bemor ID va to'lov summasi kerak");
 
@@ -299,13 +306,32 @@ class RoomController {
       // payments massiviga to'lovni qo‘shish
       roomStory.payments.push({
         amount,
+        paymentType,
         date: new Date(),
       });
 
       await roomStory.save({ session });
 
+
+      await Expense.create(
+        [
+          {
+            name: "Xona to'lovi",
+            amount,
+            type: "kirim",
+            category: "Xona to'lovi",
+            paymentType,
+            description: "Xona to'lovi relevantId ni room storydan olinadi",
+            relevantIdL: roomStory._id,
+          },
+        ],
+        { session }
+      );
+
       await session.commitTransaction();
       session.endSession();
+
+
 
       return response.success(res, "To'lov amalga oshirildi", roomStory);
     } catch (err) {

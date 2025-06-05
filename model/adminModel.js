@@ -55,6 +55,15 @@ const AdminSchema = new mongoose.Schema(
     birthday: {
       type: Date,
     },
+    salary_type: {
+      type: String,
+      default: "fixed",
+      enum: ["fixed", "percentage"],
+    },
+    percentage_from_admissions: {
+      type: Number,
+      default: 0,
+    }
   },
   { timestamps: true }
 );

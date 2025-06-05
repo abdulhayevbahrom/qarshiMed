@@ -3,6 +3,7 @@ const ajv = new Ajv({ allErrors: true });
 require("ajv-errors")(ajv);
 require("ajv-formats")(ajv);
 const response = require("../utils/response");
+const e = require("cors");
 
 const adminValidation = (req, res, next) => {
   const schema = {
@@ -47,6 +48,15 @@ const adminValidation = (req, res, next) => {
       birthday: {
         type: Date,
       },
+      salary_type: {
+        type: String,
+        default: "fixed",
+        enum: ["fixed", "percentage"],
+      },
+      percentage_from_admissions: {
+        type: Number,
+        default: 0,
+      }
     },
     required: ["firstName", "lastName", "login", "password"],
     additionalProperties: false,
@@ -78,6 +88,8 @@ const adminValidation = (req, res, next) => {
         phone: "Telefon raqam kiritish shart",
         admission_price: "Qabul narxi son bo‘lishi kerak",
         birthday: "Tug‘ulgan kun kiritish shart",
+        salary_type: "Salary type kiritish shart",
+        percentage_from_admissions: "Percentage from admissions kiritish shart",
       },
       additionalProperties: "Ruxsat etilmagan maydon kiritildi",
     },
