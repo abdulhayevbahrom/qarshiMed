@@ -16,8 +16,7 @@ class RoomController {
   // Barcha xonalarni olish
   async getRooms(req, res) {
     try {
-      const rooms = await Room.find();
-      // .populate("capacity");
+      const rooms = await Room.find().populate("capacity");
       if (!rooms.length) return response.notFound(res, "Xonalar topilmadi");
       return response.success(res, "Xonalar ro'yxati", rooms);
     } catch (err) {
