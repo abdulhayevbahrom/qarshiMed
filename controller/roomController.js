@@ -1,6 +1,7 @@
 const Room = require("../model/roomModel");
 const response = require("../utils/response");
 const RoomStory = require("../model/roomStoryModel");
+const moment = require("moment");
 const Expense = require("../model/expenseModel");
 const mongoose = require("mongoose");
 
@@ -37,10 +38,41 @@ class RoomController {
   // Xonani ID bo'yicha olish
   async getRoomById(req, res) {
     try {
-      const room = await Room.findById(req.params.id).populate("capacity");
-      if (!room) return response.notFound(res, "Xona topilmadi");
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return response.error(res, "Xona _id si noto'g'ri yuborildi");
+      }
+
+      const room = await Room.findById(req.params.id).populate({
+        path: "capacity",
+        populate: [
+          { path: "patientId", model: "patients" },
+          { path: "roomId", model: "Room" },
+          { path: "doctorId", model: "Admins" },
+        ],
+      });
+
+      if (!room) {
+        return response.notFound(res, "Xona topilmadi");
+      }
+
+      // Debug: Check if population worked
+      if (room.capacity.length > 0) {
+        room.capacity.forEach((story, index) => {
+          if (!story.patientId || !story.patientId._id) {
+            console.error(`Population failed for patientId in capacity ${index}`);
+          }
+          if (!story.roomId || !story.roomId._id) {
+            console.error(`Population failed for roomId in capacity ${index}`);
+          }
+          if (story.doctorId && !story.doctorId._id) {
+            console.error(`Population failed for doctorId in capacity ${index}`);
+          }
+        });
+      }
+
       return response.success(res, "Xona topildi", room);
     } catch (err) {
+      console.error("Error in getRoomById:", err);
       return response.serverError(res, err.message, err);
     }
   }
@@ -84,6 +116,7 @@ class RoomController {
     }
   }
 
+
   async addPatientToRoom(req, res) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -105,7 +138,28 @@ class RoomController {
         return response.error(res, "Bemor _id si noto'g'ri yuborildi");
       }
 
-      // Boshqa xonalarda ham bor-yo‘qligini tekshirish (faol RoomStory orqali)
+      // Check if patient, room, and doctor exist
+      const patient = await mongoose.model("patients").findById(patientId).session(session);
+      const room = await Room.findById(req.params.id).session(session);
+      const doctor = doctorId ? await mongoose.model("Admins").findById(doctorId).session(session) : null;
+
+      if (!patient) {
+        await session.abortTransaction();
+        session.endSession();
+        return response.error(res, "Bemor topilmadi");
+      }
+      if (!room) {
+        await session.abortTransaction();
+        session.endSession();
+        return response.error(res, "Xona topilmadi");
+      }
+      if (doctorId && !doctor) {
+        await session.abortTransaction();
+        session.endSession();
+        return response.error(res, "Doktor topilmadi");
+      }
+
+      // Check if patient is already in another active room
       const existsInOtherRoomStory = await RoomStory.findOne({
         patientId,
         active: true,
@@ -120,23 +174,16 @@ class RoomController {
         );
       }
 
-      const room = await Room.findById(req.params.id).session(session);
-      if (!room) {
-        await session.abortTransaction();
-        session.endSession();
-        return response.notFound(res, "Xona topilmadi");
-      }
-
-      // Xonada joy borligini tekshirish
+      // Check room capacity
       if (room.capacity.length >= room.usersNumber) {
         await session.abortTransaction();
         session.endSession();
         return response.error(res, "Xonada bo'sh joy yo'q");
       }
 
-      // 1. paidDays massivini avtomatik yaratish
+      // Create paidDays array
       const paidDays = [];
-      const today = require("moment")();
+      const today = moment();
       for (let i = 0; i < treatingDays; i++) {
         paidDays.push({
           day: i + 1,
@@ -146,7 +193,7 @@ class RoomController {
         });
       }
 
-      // 2. RoomStory ochish
+      // Create RoomStory
       const [roomStory] = await RoomStory.create(
         [
           {
@@ -162,9 +209,24 @@ class RoomController {
         { session }
       );
 
-      // 3. Room capacity ga roomStory._id ni qo'shish
+      // Add roomStory._id to room capacity
       room.capacity.push(roomStory._id);
       await room.save({ session });
+
+      // Populate the RoomStory
+      const populatedRoomStory = await RoomStory.findById(roomStory._id)
+        .populate("patientId")
+        .populate("roomId")
+        .populate("doctorId")
+        .session(session);
+
+      if (!populatedRoomStory.patientId || !populatedRoomStory.roomId) {
+        console.error("Population failed:", {
+          patientId: populatedRoomStory.patientId,
+          roomId: populatedRoomStory.roomId,
+          doctorId: populatedRoomStory.doctorId,
+        });
+      }
 
       await session.commitTransaction();
       session.endSession();
@@ -174,34 +236,60 @@ class RoomController {
         "Bemor xonaga biriktirildi",
         {
           room,
-          roomStory,
+          roomStory: populatedRoomStory,
         }
       );
     } catch (err) {
       await session.abortTransaction();
       session.endSession();
+      console.error("Error in addPatientToRoom:", err);
       return response.serverError(res, err.message, err);
     }
   }
 
+
+
+  // Get Room Stories
   async getRoomStories(req, res) {
     try {
       let filter = {};
       if (req.query.roomId) {
+        if (!mongoose.Types.ObjectId.isValid(req.query.roomId)) {
+          return response.error(res, "Xona _id si noto'g'ri yuborildi");
+        }
         filter.roomId = req.query.roomId;
       }
+
       const stories = await RoomStory.find(filter)
-        .populate("patientId")
-        .populate("roomId")
+        .populate({ path: "patientId", model: "patients" })
+        .populate({ path: "roomId", model: "Room" })
+        .populate({ path: "doctorId", model: "Admins" })
         .sort({ createdAt: -1 });
 
-      if (!stories.length)
+      if (!stories.length) {
         return response.notFound(res, "Room story topilmadi");
+      }
+
+      // Debug: Check if population worked
+      stories.forEach((story, index) => {
+        if (!story.patientId || !story.patientId._id) {
+          console.error(`Population failed for patientId in story ${index}`);
+        }
+        if (!story.roomId || !story.roomId._id) {
+          console.error(`Population failed for roomId in story ${index}`);
+        }
+        if (story.doctorId && !story.doctorId._id) {
+          console.error(`Population failed for doctorId in story ${index}`);
+        }
+      });
+
       return response.success(res, "Room storylar ro'yxati", stories);
     } catch (err) {
+      console.error("Error in getRoomStories:", err);
       return response.serverError(res, err.message, err);
     }
   }
+
 
   async removePatientFromRoom(req, res) {
     const session = await mongoose.startSession();
@@ -217,6 +305,7 @@ class RoomController {
       }
 
       const room = await Room.findById(roomId).session(session);
+
       if (!room) {
         await session.abortTransaction();
         session.endSession();
@@ -232,7 +321,7 @@ class RoomController {
       // RoomStory ni topamiz va yangilaymiz
       const activeStory = await RoomStory.findOne({
         roomId,
-        patientId,
+        _id: patientId,
         active: true,
       }).session(session);
 
