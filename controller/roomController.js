@@ -363,7 +363,7 @@ class RoomController {
         return response.error(res, "Bemor ID va to'lov summasi kerak");
 
       const roomStory = await RoomStory.findOne({
-        _id:roomStoryId,
+        _id: roomStoryId,
         active: true,
       }).session(session);
 
@@ -375,16 +375,24 @@ class RoomController {
       let remainingAmount = amount;
       const pricePerDay = room.pricePerDay;
 
-      // paidDaysni loop qilib to'lovni taqsimlash
+      // paidDaysni loop qilib to'lovni taqsimlash (to'liq va qisman to'lovlarni hisobga oladi)
       for (let day of roomStory.paidDays) {
         if (day.isPaid) continue;
 
-        if (remainingAmount >= pricePerDay) {
-          day.price = pricePerDay;
+        // Qolgan to'lovni hisobga olamiz
+        let unpaid = pricePerDay - (day.price || 0);
+
+        if (unpaid <= 0) {
           day.isPaid = true;
-          remainingAmount -= pricePerDay;
+          continue;
+        }
+
+        if (remainingAmount >= unpaid) {
+          day.price = (day.price || 0) + unpaid;
+          day.isPaid = true;
+          remainingAmount -= unpaid;
         } else if (remainingAmount > 0) {
-          day.price = remainingAmount;
+          day.price = (day.price || 0) + remainingAmount;
           day.isPaid = false;
           remainingAmount = 0;
           break;
@@ -411,7 +419,7 @@ class RoomController {
             category: "Xona to'lovi",
             paymentType,
             description: "Xona to'lovi relevantId ni room storydan olinadi",
-            relevantIdL: roomStory._id,
+            relevantId: roomStory._id,
           },
         ],
         { session }
@@ -427,7 +435,6 @@ class RoomController {
       return response.serverError(res, err.message, err);
     }
   }
-
   // Davolanish kunini oshirish yoki kamaytirish (inc/dec)
 
   async changeTreatingDays(req, res) {
@@ -435,26 +442,37 @@ class RoomController {
     session.startTransaction();
     try {
       const { roomStoryId, days, action } = req.body;
-      if (!roomStoryId || !days || days < 1 || !["inc", "dec"].includes(action)) {
+      if (
+        !roomStoryId ||
+        !days ||
+        days < 1 ||
+        !["inc", "dec"].includes(action)
+      ) {
         await session.abortTransaction();
         session.endSession();
-        return response.error(res, "roomStoryId, days va action (inc/dec) to'g'ri yuborilishi kerak");
+        return response.error(
+          res,
+          "roomStoryId, days va action (inc/dec) to'g'ri yuborilishi kerak"
+        );
       }
-  
+
       const roomStory = await RoomStory.findById(roomStoryId).session(session);
       if (!roomStory) {
         await session.abortTransaction();
         session.endSession();
         return response.error(res, "RoomStory topilmadi");
       }
-  
+
       if (action === "inc") {
         // paidDays massivining oxirgi kunini aniqlash
         let lastDay = 0;
         let lastDate = moment();
         if (roomStory.paidDays.length > 0) {
           lastDay = roomStory.paidDays[roomStory.paidDays.length - 1].day;
-          lastDate = moment(roomStory.paidDays[roomStory.paidDays.length - 1].date, "DD.MM.YYYY");
+          lastDate = moment(
+            roomStory.paidDays[roomStory.paidDays.length - 1].date,
+            "DD.MM.YYYY"
+          );
         } else if (roomStory.startDay) {
           lastDate = moment(roomStory.startDay, "DD.MM.YYYY HH:mm");
         }
@@ -468,28 +486,33 @@ class RoomController {
           });
         }
         roomStory.active = true;
-        roomStory.endDay = roomStory.paidDays[roomStory.paidDays.length - 1].date;
+        roomStory.endDay =
+          roomStory.paidDays[roomStory.paidDays.length - 1].date;
       } else if (action === "dec") {
         // paidDays massivining oxiridan days ta kunni olib tashlash
         if (roomStory.paidDays.length > days) {
-          roomStory.paidDays = roomStory.paidDays.slice(0, roomStory.paidDays.length - days);
+          roomStory.paidDays = roomStory.paidDays.slice(
+            0,
+            roomStory.paidDays.length - days
+          );
         } else {
           roomStory.paidDays = [];
         }
         // endDay ni oxirgi kun sanasiga o‘zgartirish
         if (roomStory.paidDays.length > 0) {
-          roomStory.endDay = roomStory.paidDays[roomStory.paidDays.length - 1].date;
+          roomStory.endDay =
+            roomStory.paidDays[roomStory.paidDays.length - 1].date;
         } else {
           roomStory.endDay = moment().format("DD.MM.YYYY");
         }
         // Agar paidDays bo'sh bo'lsa, active false qilinadi
         if (roomStory.paidDays.length === 0) roomStory.active = false;
       }
-  
+
       await roomStory.save({ session });
       await session.commitTransaction();
       session.endSession();
-  
+
       return response.success(res, "Davolanish kunlari yangilandi", roomStory);
     } catch (err) {
       await session.abortTransaction();
