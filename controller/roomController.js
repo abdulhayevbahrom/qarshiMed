@@ -59,13 +59,17 @@ class RoomController {
       if (room.capacity.length > 0) {
         room.capacity.forEach((story, index) => {
           if (!story.patientId || !story.patientId._id) {
-            console.error(`Population failed for patientId in capacity ${index}`);
+            console.error(
+              `Population failed for patientId in capacity ${index}`
+            );
           }
           if (!story.roomId || !story.roomId._id) {
             console.error(`Population failed for roomId in capacity ${index}`);
           }
           if (story.doctorId && !story.doctorId._id) {
-            console.error(`Population failed for doctorId in capacity ${index}`);
+            console.error(
+              `Population failed for doctorId in capacity ${index}`
+            );
           }
         });
       }
@@ -116,7 +120,6 @@ class RoomController {
     }
   }
 
-
   async addPatientToRoom(req, res) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -139,9 +142,14 @@ class RoomController {
       }
 
       // Check if patient, room, and doctor exist
-      const patient = await mongoose.model("patients").findById(patientId).session(session);
+      const patient = await mongoose
+        .model("patients")
+        .findById(patientId)
+        .session(session);
       const room = await Room.findById(req.params.id).session(session);
-      const doctor = doctorId ? await mongoose.model("Admins").findById(doctorId).session(session) : null;
+      const doctor = doctorId
+        ? await mongoose.model("Admins").findById(doctorId).session(session)
+        : null;
 
       if (!patient) {
         await session.abortTransaction();
@@ -231,14 +239,10 @@ class RoomController {
       await session.commitTransaction();
       session.endSession();
 
-      return response.success(
-        res,
-        "Bemor xonaga biriktirildi",
-        {
-          room,
-          roomStory: populatedRoomStory,
-        }
-      );
+      return response.success(res, "Bemor xonaga biriktirildi", {
+        room,
+        roomStory: populatedRoomStory,
+      });
     } catch (err) {
       await session.abortTransaction();
       session.endSession();
@@ -246,8 +250,6 @@ class RoomController {
       return response.serverError(res, err.message, err);
     }
   }
-
-
 
   // Get Room Stories
   async getRoomStories(req, res) {
@@ -289,7 +291,6 @@ class RoomController {
       return response.serverError(res, err.message, err);
     }
   }
-
 
   async removePatientFromRoom(req, res) {
     const session = await mongoose.startSession();
@@ -357,12 +358,12 @@ class RoomController {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-      const { patientId, amount, paymentType } = req.body;
-      if (!patientId || !amount)
+      const { roomStoryId, amount, paymentType } = req.body;
+      if (!roomStoryId || !amount)
         return response.error(res, "Bemor ID va to'lov summasi kerak");
 
       const roomStory = await RoomStory.findOne({
-        patientId,
+        _id:roomStoryId,
         active: true,
       }).session(session);
 
@@ -401,7 +402,6 @@ class RoomController {
 
       await roomStory.save({ session });
 
-
       await Expense.create(
         [
           {
@@ -420,9 +420,77 @@ class RoomController {
       await session.commitTransaction();
       session.endSession();
 
-
-
       return response.success(res, "To'lov amalga oshirildi", roomStory);
+    } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
+      return response.serverError(res, err.message, err);
+    }
+  }
+
+  // Davolanish kunini oshirish yoki kamaytirish (inc/dec)
+
+  async changeTreatingDays(req, res) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const { roomStoryId, days, action } = req.body;
+      if (!roomStoryId || !days || days < 1 || !["inc", "dec"].includes(action)) {
+        await session.abortTransaction();
+        session.endSession();
+        return response.error(res, "roomStoryId, days va action (inc/dec) to'g'ri yuborilishi kerak");
+      }
+  
+      const roomStory = await RoomStory.findById(roomStoryId).session(session);
+      if (!roomStory) {
+        await session.abortTransaction();
+        session.endSession();
+        return response.error(res, "RoomStory topilmadi");
+      }
+  
+      if (action === "inc") {
+        // paidDays massivining oxirgi kunini aniqlash
+        let lastDay = 0;
+        let lastDate = moment();
+        if (roomStory.paidDays.length > 0) {
+          lastDay = roomStory.paidDays[roomStory.paidDays.length - 1].day;
+          lastDate = moment(roomStory.paidDays[roomStory.paidDays.length - 1].date, "DD.MM.YYYY");
+        } else if (roomStory.startDay) {
+          lastDate = moment(roomStory.startDay, "DD.MM.YYYY HH:mm");
+        }
+        // Yangi kunlarni qo'shish
+        for (let i = 1; i <= days; i++) {
+          roomStory.paidDays.push({
+            day: lastDay + i,
+            date: lastDate.clone().add(i, "days").format("DD.MM.YYYY"),
+            price: 0,
+            isPaid: false,
+          });
+        }
+        roomStory.active = true;
+        roomStory.endDay = roomStory.paidDays[roomStory.paidDays.length - 1].date;
+      } else if (action === "dec") {
+        // paidDays massivining oxiridan days ta kunni olib tashlash
+        if (roomStory.paidDays.length > days) {
+          roomStory.paidDays = roomStory.paidDays.slice(0, roomStory.paidDays.length - days);
+        } else {
+          roomStory.paidDays = [];
+        }
+        // endDay ni oxirgi kun sanasiga o‘zgartirish
+        if (roomStory.paidDays.length > 0) {
+          roomStory.endDay = roomStory.paidDays[roomStory.paidDays.length - 1].date;
+        } else {
+          roomStory.endDay = moment().format("DD.MM.YYYY");
+        }
+        // Agar paidDays bo'sh bo'lsa, active false qilinadi
+        if (roomStory.paidDays.length === 0) roomStory.active = false;
+      }
+  
+      await roomStory.save({ session });
+      await session.commitTransaction();
+      session.endSession();
+  
+      return response.success(res, "Davolanish kunlari yangilandi", roomStory);
     } catch (err) {
       await session.abortTransaction();
       session.endSession();

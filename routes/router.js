@@ -51,7 +51,7 @@ router.patch("/room/closeRoom/:id", roomController.closeRoom);
 router.patch("/room/addPatient/:id", roomController.addPatientToRoom);
 router.post("/room/removePatient/:id", roomController.removePatientFromRoom);
 router.post("/room/pay", roomController.payForRoom);
-
+router.patch("/roomStory/changeDays", roomController.changeTreatingDays);
 // expense
 const expenseController = require("../controller/expensesController");
 const expenseValidation = require("../validation/expensesValidation");
