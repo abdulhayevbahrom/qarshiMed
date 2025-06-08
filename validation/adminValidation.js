@@ -3,7 +3,6 @@ const ajv = new Ajv({ allErrors: true });
 require("ajv-errors")(ajv);
 require("ajv-formats")(ajv);
 const response = require("../utils/response");
-const e = require("cors");
 
 const adminValidation = (req, res, next) => {
   const schema = {
@@ -21,8 +20,7 @@ const adminValidation = (req, res, next) => {
       password: { type: "string", minLength: 6, maxLength: 50 },
       role: {
         type: "string",
-        minLength: 3,
-        maxLength: 30,
+        enum: ["reception", "director", "doctor"],
       },
       permissions: {
         type: "array",
@@ -33,63 +31,59 @@ const adminValidation = (req, res, next) => {
       },
       salary_per_month: {
         type: "number",
+        minimum: 0,
       },
       specialization: {
         type: "string",
       },
       phone: {
-        type: String,
-        required: true,
+        type: "string",
+        minLength: 7,
+        maxLength: 15,
       },
       admission_price: {
-        type: Number,
-        default: 0,
+        type: "number",
+        minimum: 0,
       },
       birthday: {
-        type: Date,
+        type: "string",
+        format: "date",
       },
       salary_type: {
-        type: String,
-        default: "fixed",
+        type: "string",
         enum: ["fixed", "percentage"],
       },
       percentage_from_admissions: {
-        type: Number,
-        default: 0,
-      }
+        type: "number",
+        minimum: 0,
+      },
     },
-    required: ["firstName", "lastName", "login", "password"],
+    required: ["firstName", "lastName", "address", "login", "password", "phone"],
     additionalProperties: false,
     errorMessage: {
       required: {
         firstName: "Ism kiritish shart",
         lastName: "Familiya kiritish shart",
+        address: "Manzil kiritish shart",
         login: "Login kiritish shart",
         password: "Parol kiritish shart",
-        role: "Lavozim kiritish shart",
-        permissions: "Ruxsatlar kiritish shart",
-        salary_per_month: "Oylik maosh kiritish shart",
-        specialization: "Yo'nalishi kiritish shart",
         phone: "Telefon raqam kiritish shart",
-        admission_price: "Qabul narxi kiritish shart",
-        birthday: "Tug‘ulgan kun kiritish shart",
       },
       properties: {
         firstName: "Ism 2-50 ta belgi oralig‘ida bo‘lishi kerak",
         lastName: "Familiya 2-50 ta belgi oralig‘ida bo‘lishi kerak",
-        login:
-          "Login 4-20 ta belgi bo‘lib, faqat harf va raqamlardan iborat bo‘lishi kerak",
+        address: "Manzil 2-100 ta belgi oralig‘ida bo‘lishi kerak",
+        login: "Login 4-20 ta belgidan iborat, faqat harflar va raqamlar",
         password: "Parol 6-50 ta belgi oralig‘ida bo‘lishi kerak",
-        role: "Lavozim 3-30 ta belgi oralig‘ida bo‘lishi kerak",
-        permissions:
-          "Permissions — takrorlanmagan stringlar ro‘yxati bo‘lishi kerak",
-        salary_per_month: "Oylik maosh son bo‘lishi kerak",
-        specialization: "Yo'nalishi kiritish shart",
-        phone: "Telefon raqam kiritish shart",
-        admission_price: "Qabul narxi son bo‘lishi kerak",
-        birthday: "Tug‘ulgan kun kiritish shart",
-        salary_type: "Salary type kiritish shart",
-        percentage_from_admissions: "Percentage from admissions kiritish shart",
+        role: "Rol noto‘g‘ri (faqat 'reception', 'director', 'doctor')",
+        permissions: "Ruxsatlar ro‘yxati takrorlanmaydigan stringlardan iborat bo‘lishi kerak",
+        salary_per_month: "Oylik maosh 0 dan katta son bo‘lishi kerak",
+        specialization: "Yo‘nalish noto‘g‘ri",
+        phone: "Telefon raqam noto‘g‘ri",
+        admission_price: "Qabul narxi noto‘g‘ri",
+        birthday: "Tug‘ilgan sana noto‘g‘ri formatda (YYYY-MM-DD)",
+        salary_type: "Maosh turi noto‘g‘ri (fixed yoki percentage)",
+        percentage_from_admissions: "Foiz noto‘g‘ri (0 dan katta son)",
       },
       additionalProperties: "Ruxsat etilmagan maydon kiritildi",
     },
@@ -97,12 +91,13 @@ const adminValidation = (req, res, next) => {
 
   const validate = ajv.compile(schema);
   const result = validate(req.body);
+
   if (!result) {
-    let errorField =
-      validate.errors[0].instancePath.replace("/", "") || "Umumiy";
-    let errorMessage = validate.errors[0].message;
+    const errorField = validate.errors[0].instancePath.replace("/", "") || "Umumiy";
+    const errorMessage = validate.errors[0].message;
     return response.error(res, `${errorField} xato: ${errorMessage}`);
   }
+
   next();
 };
 

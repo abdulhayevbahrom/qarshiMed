@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const adminController = require("../controller/adminController");
 const adminValidation = require("../validation/adminValidation");
+const AttendanceController = require('../controller/attendanceController');
 
 router.post("/admin/login", adminController.login);
 router.get("/admin/all", adminController.getAdmins);
@@ -9,6 +10,15 @@ router.get("/admin/:id", adminController.getAdminById);
 router.post("/admin/create", adminValidation, adminController.createAdmin);
 router.put("/admin/update/:id", adminValidation, adminController.updateAdmin);
 router.delete("/admin/delete/:id", adminController.deleteAdmin);
+
+
+// NFC scan endpoint (asosiy) attendance
+router.post('/nfc-scan', AttendanceController.nfcScan);
+router.post('/check-in', AttendanceController.checkIn);
+router.post('/check-out', AttendanceController.checkOut);
+router.get('/daily-report', AttendanceController.getDailyReport);
+router.get('/employee-history/:employee_id', AttendanceController.getEmployeeHistory);
+
 
 const patientController = require("../controller/patientController");
 router.post("/client/create", patientController.createPatient);

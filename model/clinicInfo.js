@@ -24,6 +24,38 @@ const clinicInfoSchema = new mongoose.Schema({
   logo: {
     type: String,
   },
+  // Ish vaqti sozlamalari
+  work_schedule: {
+    start_time: {
+      type: String,
+      default: "08:00",
+      required: true
+    },
+    end_time: {
+      type: String,
+      default: "17:00",
+      required: true
+    },
+    work_days: {
+      type: [String],
+      default: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+      enum: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    },
+    lunch_break: {
+      start_time: {
+        type: String,
+        default: "12:00"
+      },
+      end_time: {
+        type: String,
+        default: "13:00"
+      },
+      enabled: {
+        type: Boolean,
+        default: true
+      }
+    }
+  }
 });
 
 module.exports = mongoose.model("ClinicInfo", clinicInfoSchema);

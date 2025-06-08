@@ -53,6 +53,8 @@ class AdminController {
             _id: 1,
             firstName: 1,
             lastName: 1,
+            specialization: 1,
+            admission_price: 1,
             todayQueue: { $size: "$todayStories" },
           },
         },
