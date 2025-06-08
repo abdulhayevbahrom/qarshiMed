@@ -5,14 +5,6 @@ const clinicInfoSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  startTime: {
-    type: String,
-    required: true,
-  },
-  endTime: {
-    type: String,
-    required: true,
-  },
   address: {
     type: String,
     required: true,
@@ -29,33 +21,33 @@ const clinicInfoSchema = new mongoose.Schema({
     start_time: {
       type: String,
       default: "08:00",
-      required: true
+      required: true,
     },
     end_time: {
       type: String,
       default: "17:00",
-      required: true
+      required: true,
     },
     work_days: {
       type: [String],
       default: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
-      enum: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+      enum: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
     },
     lunch_break: {
       start_time: {
         type: String,
-        default: "12:00"
+        default: "12:00",
       },
       end_time: {
         type: String,
-        default: "13:00"
+        default: "13:00",
       },
       enabled: {
         type: Boolean,
-        default: true
-      }
-    }
-  }
+        default: true,
+      },
+    },
+  },
 });
 
 module.exports = mongoose.model("ClinicInfo", clinicInfoSchema);

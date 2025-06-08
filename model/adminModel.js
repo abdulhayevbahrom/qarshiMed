@@ -64,17 +64,7 @@ const AdminSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    // NFC karta uchun fieldlar
-    nfc_card_id: {
-      type: String,
-      unique: true,
-      sparse: true,
-      trim: true,
-    },
-    is_active: {
-      type: Boolean,
-      default: true,
-    },
+
   },
   { timestamps: true }
 );
