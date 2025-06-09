@@ -20,7 +20,7 @@ const adminValidation = (req, res, next) => {
       password: { type: "string", minLength: 6, maxLength: 50 },
       role: {
         type: "string",
-        enum: ["reception", "director", "doctor"],
+        enum: ["reception", "director", "doctor", "nurse", "cleaner"],
       },
       permissions: {
         type: "array",
@@ -41,9 +41,11 @@ const adminValidation = (req, res, next) => {
         minLength: 7,
         maxLength: 15,
       },
-      admission_price: {
-        type: "number",
-        minimum: 0,
+      servicesId: {
+        type: "array",
+        items: {
+          type: "string",
+        },
       },
       birthday: {
         type: "string",
@@ -80,7 +82,7 @@ const adminValidation = (req, res, next) => {
         salary_per_month: "Oylik maosh 0 dan katta son bo‘lishi kerak",
         specialization: "Yo‘nalish noto‘g‘ri",
         phone: "Telefon raqam noto‘g‘ri",
-        admission_price: "Qabul narxi noto‘g‘ri",
+        servicesId: "Services id noto‘g‘ri",
         birthday: "Tug‘ilgan sana noto‘g‘ri formatda (YYYY-MM-DD)",
         salary_type: "Maosh turi noto‘g‘ri (fixed yoki percentage)",
         percentage_from_admissions: "Foiz noto‘g‘ri (0 dan katta son)",

@@ -6,7 +6,7 @@ class ClinicInfoController {
   async createClinicInfo(req, res) {
     try {
       const clinic = await ClinicInfo.create(req.body);
-      if(!clinic) return response.error(res,"malumot saqlashda hatolik");
+      if (!clinic) return response.error(res, "malumot saqlashda hatolik");
       return response.success(res, "Klinika ma'lumotlari yaratildi", clinic);
     } catch (err) {
       return response.serverError(res, err.message, err);
@@ -34,6 +34,16 @@ class ClinicInfoController {
       const clinics = await ClinicInfo.find();
       if (!clinics.length) return response.notFound(res, "Klinika topilmadi");
       return response.success(res, "Success", clinics[0]);
+    } catch (err) {
+      return response.serverError(res, err.message, err);
+    }
+  }
+  // Klinikani o'chirish
+  async deleteClinicInfo(req, res) {
+    try {
+      const clinic = await ClinicInfo.findByIdAndDelete(req.params.id);
+      if (!clinic) return response.notFound(res, "Klinika topilmadi");
+      return response.success(res, "Klinika ma'lumotlari o'chirildi", clinic);
     } catch (err) {
       return response.serverError(res, err.message, err);
     }

@@ -29,8 +29,8 @@ const AdminSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      default: "admin",
-      enum: ["reception", "director", "doctor"],
+      default: "director",
+      enum: ["reception", "director", "doctor", "nurse", "cleaner"],
     },
     permissions: {
       type: [String],
@@ -48,10 +48,10 @@ const AdminSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    admission_price: {
-      type: Number,
-      default: 0,
-    },
+    // admission_price: {
+    //   type: Number,
+    //   default: 0,
+    // },
     birthday: {
       type: Date,
     },
@@ -64,7 +64,10 @@ const AdminSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-
+    servicesId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Services"
+    }
   },
   { timestamps: true }
 );

@@ -1,4 +1,3 @@
-const { default: def } = require("ajv/dist/vocabularies/discriminator");
 const mongoose = require("mongoose");
 
 const roomSchema = new mongoose.Schema(
@@ -16,6 +15,31 @@ const roomSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    // Har bir joy holatini alohida ko'rsatish
+    beds: {
+      type: [
+        {
+          status: {
+            type: String,
+            enum: ["bo'sh", "band", "toza emas", "toza"],
+            default: "bo'sh",
+          },
+          comment: {
+            type: String,
+            default: "",
+          },
+        },
+      ],
+      default: [],
+    },
+    nurse: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Nurse", // User modeldan foydalansangiz
+    },
+    cleaner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Cleaner", // User modeldan foydalansangiz
+    },
     capacity: {
       type: [
         {
@@ -31,7 +55,7 @@ const roomSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ["luxury", "standard", "econom"], // kerakli turlarni qo'shing
+      enum: ["luxury", "standard", "econom"],
       required: true,
     },
     closeRoom: {

@@ -8,18 +8,33 @@ const mongoose = require("mongoose");
 class RoomController {
   async createRoom(req, res) {
     try {
-      const roomNumber = req.body.roomNumber;
+      const { roomNumber, usersNumber } = req.body;
+
+      // Tekshiruv: xona raqami band bo'lmasligi kerak
       const exist_room = await Room.findOne({ roomNumber });
       if (exist_room) {
         return response.error(res, "Xona raqami band");
       }
-      const room = await Room.create(req.body);
+
+      // Har bir bemor uchun joy holatini boshlang'ich tarzda 'bo'sh' qilib kiritamiz
+      const beds = [];
+      for (let i = 0; i < usersNumber; i++) {
+        beds.push({ status: "bo'sh", comment: "" });
+      }
+
+      // Xona obyektini yaratamiz
+      const room = await Room.create({
+        ...req.body,
+        beds,
+      });
+
       if (!room) return response.notFound(res, "Xona yaratilmadi");
       return response.success(res, "Xona yaratildi", room);
     } catch (err) {
       return response.serverError(res, err.message, err);
     }
   }
+
 
   // Barcha xonalarni olish
   async getRooms(req, res) {
