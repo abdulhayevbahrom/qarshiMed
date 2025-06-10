@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-// Doktor schemasi
 const servicesSchema = new mongoose.Schema({
     profession: {
         type: String,
@@ -9,9 +8,10 @@ const servicesSchema = new mongoose.Schema({
     },
     doctorId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Admins'
+        ref: "Admins",
     },
     services: [{
+        _id: false, // Disable _id for subdocuments
         name: {
             type: String,
             required: true,
