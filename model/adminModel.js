@@ -66,8 +66,14 @@ const AdminSchema = new mongoose.Schema(
     },
     servicesId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Services"
-    }
+      ref: "Services",
+    },
+    // for attendance
+    idCardNumber: {
+      type: String,
+      unique: true,
+      trim: true,
+    },
   },
   { timestamps: true }
 );

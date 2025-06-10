@@ -59,8 +59,18 @@ const adminValidation = (req, res, next) => {
         type: "number",
         minimum: 0,
       },
+      idCardNumber: {
+        type: "string",
+      },
     },
-    required: ["firstName", "lastName", "address", "login", "password", "phone"],
+    required: [
+      "firstName",
+      "lastName",
+      "address",
+      "login",
+      "password",
+      "phone",
+    ],
     additionalProperties: false,
     errorMessage: {
       required: {
@@ -78,7 +88,8 @@ const adminValidation = (req, res, next) => {
         login: "Login 4-20 ta belgidan iborat, faqat harflar va raqamlar",
         password: "Parol 6-50 ta belgi oralig‘ida bo‘lishi kerak",
         role: "Rol noto‘g‘ri (faqat 'reception', 'director', 'doctor')",
-        permissions: "Ruxsatlar ro‘yxati takrorlanmaydigan stringlardan iborat bo‘lishi kerak",
+        permissions:
+          "Ruxsatlar ro‘yxati takrorlanmaydigan stringlardan iborat bo‘lishi kerak",
         salary_per_month: "Oylik maosh 0 dan katta son bo‘lishi kerak",
         specialization: "Yo‘nalish noto‘g‘ri",
         phone: "Telefon raqam noto‘g‘ri",
@@ -86,6 +97,7 @@ const adminValidation = (req, res, next) => {
         birthday: "Tug‘ilgan sana noto‘g‘ri formatda (YYYY-MM-DD)",
         salary_type: "Maosh turi noto‘g‘ri (fixed yoki percentage)",
         percentage_from_admissions: "Foiz noto‘g‘ri (0 dan katta son)",
+        idCardNumber: "ID karta raqami noto‘g‘ri",
       },
       additionalProperties: "Ruxsat etilmagan maydon kiritildi",
     },
@@ -95,7 +107,8 @@ const adminValidation = (req, res, next) => {
   const result = validate(req.body);
 
   if (!result) {
-    const errorField = validate.errors[0].instancePath.replace("/", "") || "Umumiy";
+    const errorField =
+      validate.errors[0].instancePath.replace("/", "") || "Umumiy";
     const errorMessage = validate.errors[0].message;
     return response.error(res, `${errorField} xato: ${errorMessage}`);
   }

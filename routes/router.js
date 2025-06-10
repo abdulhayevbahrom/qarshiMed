@@ -3,7 +3,7 @@ const router = require("express").Router();
 // Controllers and Validations
 const adminController = require("../controller/adminController");
 const adminValidation = require("../validation/adminValidation");
-const AttendanceController = require('../controller/attendanceController');
+const AttendanceController = require("../controller/attendanceController");
 const patientController = require("../controller/patientController");
 const storyController = require("../controller/storyController");
 const ClinicInfoController = require("../controller/clinicInfoController");
@@ -13,7 +13,7 @@ const roomValidation = require("../validation/roomValidation");
 const expenseController = require("../controller/expensesController");
 const expenseValidation = require("../validation/expensesValidation");
 const dashboardController = require("../controller/dashboardController");
-const servicesController = require('../controller/services-crud');
+const servicesController = require("../controller/services-crud");
 
 /**
  * ============================
@@ -37,7 +37,10 @@ router.post("/nfc-scan", AttendanceController.nfcScan);
 router.post("/check-in", AttendanceController.checkIn);
 router.post("/check-out", AttendanceController.checkOut);
 router.get("/daily-report", AttendanceController.getDailyReport);
-router.get("/employee-history/:employee_id", AttendanceController.getEmployeeHistory);
+router.get(
+  "/employee-history/:employee_id",
+  AttendanceController.getEmployeeHistory
+);
 
 /**
  * ============================
@@ -66,7 +69,11 @@ router.get("/story/todays", storyController.getTodaysStory);
  * Clinic Info Routes
  * ============================
  */
-router.post("/clinic/create", clinicInfoValidation, ClinicInfoController.createClinicInfo);
+router.post(
+  "/clinic/create",
+  clinicInfoValidation,
+  ClinicInfoController.createClinicInfo
+);
 router.put("/clinic/update/:id", ClinicInfoController.updateClinicInfo);
 router.get("/clinic/info", ClinicInfoController.getClinicInfo);
 
@@ -92,7 +99,11 @@ router.patch("/roomStory/changeDays", roomController.changeTreatingDays);
  * Expense Routes
  * ============================
  */
-router.post("/expense/create", expenseValidation, expenseController.createExpense);
+router.post(
+  "/expense/create",
+  expenseValidation,
+  expenseController.createExpense
+);
 router.get("/expense/all", expenseController.getExpenses);
 
 /**
@@ -100,19 +111,19 @@ router.get("/expense/all", expenseController.getExpenses);
  * Dashboard Routes
  * ============================
  */
-router.get("/doctor/report/today", dashboardController.getDoctorsTodayReport);
+router.get("/dashboard", dashboardController.getDashboard);
 
 /**
  * ============================
  * Services Routes
  * ============================
  */
-router.post('/services', servicesController.create);
-router.get('/services', servicesController.getAll);
-router.get('/services/:id', servicesController.getById);
-router.put('/services/:id', servicesController.update);
-router.delete('/services/:id', servicesController.delete);
-router.post('/services/:id/add', servicesController.addService);
-router.delete('/services/:id/remove', servicesController.deleteService);
+router.post("/services", servicesController.create);
+router.get("/services", servicesController.getAll);
+router.get("/services/:id", servicesController.getById);
+router.put("/services/:id", servicesController.update);
+router.delete("/services/:id", servicesController.delete);
+router.post("/services/:id/add", servicesController.addService);
+router.delete("/services/:id/remove", servicesController.deleteService);
 
 module.exports = router;
