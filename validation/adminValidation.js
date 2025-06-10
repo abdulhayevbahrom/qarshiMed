@@ -110,7 +110,7 @@ const adminValidation = (req, res, next) => {
     const errorField =
       validate.errors[0].instancePath.replace("/", "") || "Umumiy";
     const errorMessage = validate.errors[0].message;
-    return response.error(res, `${errorField} xato: ${errorMessage}`);
+    return response.error(res, `${errorField} xato: ${errorMessage}`,validate.errors);
   }
 
   next();
