@@ -27,7 +27,7 @@ const servicesValidation = (req, res, next) => {
                         name: {
                             type: "string",
                             minLength: 1,
-                            errorMessage: "Xizmat nomi bo'sh bo'lmasligi kerak"
+                            errorMessage: "Xizmat nomi bo'sh bo'lmasligi"
                         },
                         price: {
                             type: "number",
@@ -65,7 +65,7 @@ const servicesValidation = (req, res, next) => {
 
     if (!valid) {
         const errors = validate.errors.map(err => ({
-            field: err.instancePath || err.params.missingProperty || 'unknown',
+            field: err.instancePath.replace(/^\//, '') || err.params.missingProperty || 'unknown',
             message: err.message
         }));
         return response(res, 400, "Validatsiya xatosi", { errors });
@@ -74,4 +74,4 @@ const servicesValidation = (req, res, next) => {
     next();
 };
 
-module.exports = servicesValidation;
+module.exports = servicesValidation; s

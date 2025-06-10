@@ -16,7 +16,7 @@ class ServicesController {
     // READ - Barcha xizmatlarni olish
     async getAll(req, res) {
         try {
-            const services = await Services.find().populate('doctorId', 'name');
+            const services = await Services.find().populate('doctorId');
             return response.success(res, "Xizmatlar ro'yxati", services);
         } catch (error) {
             return response.serverError(res, "Server xatosi", error.message);

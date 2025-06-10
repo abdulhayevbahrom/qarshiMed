@@ -34,11 +34,11 @@ const roomSchema = new mongoose.Schema(
     },
     nurse: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Nurse", // User modeldan foydalansangiz
+      ref: "Admins", // User modeldan foydalansangiz
     },
     cleaner: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Cleaner", // User modeldan foydalansangiz
+      ref: "Admins", // User modeldan foydalansangiz
     },
     capacity: {
       type: [
