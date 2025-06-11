@@ -49,11 +49,6 @@ const NightShiftSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    createdBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Admins',
-        required: true
-    }
 }, { timestamps: true });
 
 // Smena Hisoboti Schema

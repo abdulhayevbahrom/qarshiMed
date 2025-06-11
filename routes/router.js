@@ -14,6 +14,7 @@ const expenseController = require("../controller/expensesController");
 const expenseValidation = require("../validation/expensesValidation");
 const dashboardController = require("../controller/dashboardController");
 const servicesController = require("../controller/services-crud");
+const NightShiftController = require('../controller/nightShiftController');
 
 /**
  * ============================
@@ -38,8 +39,8 @@ router.post("/check-in", AttendanceController.checkIn);
 router.post("/check-out", AttendanceController.checkOut);
 router.get("/daily-report", AttendanceController.getDailyReport);
 router.get(
-  "/employee-history/:employee_id",
-  AttendanceController.getEmployeeHistory
+    "/employee-history/:employee_id",
+    AttendanceController.getEmployeeHistory
 );
 
 /**
@@ -70,9 +71,9 @@ router.get("/story/todays", storyController.getTodaysStory);
  * ============================
  */
 router.post(
-  "/clinic/create",
-  clinicInfoValidation,
-  ClinicInfoController.createClinicInfo
+    "/clinic/create",
+    clinicInfoValidation,
+    ClinicInfoController.createClinicInfo
 );
 router.put("/clinic/update/:id", ClinicInfoController.updateClinicInfo);
 router.get("/clinic/info", ClinicInfoController.getClinicInfo);
@@ -100,9 +101,9 @@ router.patch("/roomStory/changeDays", roomController.changeTreatingDays);
  * ============================
  */
 router.post(
-  "/expense/create",
-  expenseValidation,
-  expenseController.createExpense
+    "/expense/create",
+    expenseValidation,
+    expenseController.createExpense
 );
 router.get("/expense/all", expenseController.getExpenses);
 
@@ -125,5 +126,27 @@ router.put("/services/:id", servicesController.update);
 router.delete("/services/:id", servicesController.delete);
 router.post("/services/:id/add", servicesController.addService);
 router.delete("/services/:id/remove", servicesController.deleteService);
+
+
+/**
+ * ============================
+ * Nurse night shifts
+ * ============================
+ */
+router.get('/nurses', NightShiftController.getNurses);
+router.get('/night-shifts', NightShiftController.getNightShifts);
+router.post('/night-shifts', NightShiftController.createNightShift);
+router.put('/night-shifts/:id', NightShiftController.updateNightShift);
+router.delete('/night-shifts/:id', NightShiftController.deleteNightShift);
+router.delete('/night-shifts/:id/nurses/:nurseId', NightShiftController.removeNurseFromShift);
+router.post('/night-shifts/:id/start', NightShiftController.startShift);
+router.post('/night-shifts/:id/end', NightShiftController.endShift);
+router.post('/night-shifts/auto-schedule', NightShiftController.autoScheduleShifts);
+router.post('/shift-reports', NightShiftController.createShiftReport);
+router.get('/shift-reports', NightShiftController.getShiftReports);
+router.get('/statistics/shifts', NightShiftController.getShiftStatistics);
+router.get('/statistics/nurse-earnings/:nurseId', NightShiftController.getNurseEarnings);
+router.get('/statistics/reports', NightShiftController.getNurseReports);
+
 
 module.exports = router;

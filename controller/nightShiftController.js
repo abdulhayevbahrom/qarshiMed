@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-import { NightShift, ShiftReport } from '../model/nightShiftSchema'
+const { NightShift, ShiftReport } = require('../model/nightShiftSchema');
 const Admin = require('../model/adminModel'); // Assuming Admin model exists
 
 class NightShiftController {
@@ -34,7 +34,6 @@ class NightShiftController {
 
             const shifts = await NightShift.find(query)
                 .populate('nurses.nurseId', 'firstName lastName specialization')
-                .populate('createdBy', 'firstName lastName')
                 .sort({ date: 1 });
 
             res.json(shifts);
@@ -46,7 +45,7 @@ class NightShiftController {
     // Create new night shift
     async createNightShift(req, res) {
         try {
-            const { date, nurses, shiftPrice = 150000 } = req.body;
+            const { date, nurses, shiftPrice = 100000 } = req.body;
 
             const existingShift = await NightShift.findOne({ date: new Date(date) });
             if (existingShift) {
@@ -73,12 +72,10 @@ class NightShiftController {
                 date: new Date(date),
                 nurses: shiftNurses,
                 totalCost: shiftNurses.length * shiftPrice,
-                createdBy: req.user.id
             });
 
             const savedShift = await nightShift.save();
             await savedShift.populate('nurses.nurseId', 'firstName lastName specialization');
-            await savedShift.populate('createdBy', 'firstName lastName');
 
             res.status(201).json(savedShift);
         } catch (error) {
@@ -119,7 +116,6 @@ class NightShiftController {
 
             const updatedShift = await shift.save();
             await updatedShift.populate('nurses.nurseId', 'firstName lastName specialization');
-            await updatedShift.populate('createdBy', 'firstName lastName');
 
             res.json(updatedShift);
         } catch (error) {
@@ -175,8 +171,7 @@ class NightShiftController {
             if (!shift) {
                 return res.status(404).json({ message: 'Smena topilmadi' });
             }
-
-            const nurseIndex = shift.nurses.findIndex(n => n.nurseId.toString() === nurseId);
+            const nurseIndex = shift.nurses.findIndex(n => n.nurseId.equals(nurseId)); // Use .equals() for ObjectId comparison
             if (nurseIndex === -1) {
                 return res.status(404).json({ message: 'Hamshira smenada topilmadi' });
             }
@@ -267,7 +262,6 @@ class NightShiftController {
                     date: currentDate,
                     nurses: shiftNurses,
                     totalCost: shiftNurses.length * shiftPrice,
-                    createdBy: req.user.id
                 });
 
                 const savedShift = await nightShift.save();
@@ -450,6 +444,86 @@ class NightShiftController {
             res.status(500).json({ message: 'Xato yuz berdi', error: error.message });
         }
     }
+
+    // GET /api/reports
+    async getNurseReports(req, res) {
+        try {
+            const { dateFrom, dateTo, nurseId } = req.query;
+
+            // Validate input
+            if (!dateFrom || !dateTo) {
+                return res.status(400).json({ message: 'dateFrom and dateTo are required' });
+            }
+
+            // Parse dates to UTC
+            const startDate = new Date(dateFrom);
+            const endDate = new Date(dateTo);
+            endDate.setUTCHours(23, 59, 59, 999); // Include entire end date
+
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                return res.status(400).json({ message: 'Invalid date format' });
+            }
+
+            // Build query
+            const matchStage = {
+                date: {
+                    $gte: startDate,
+                    $lte: endDate,
+                },
+            };
+
+            // Unwind nurses array and filter by nurseId if provided
+            const pipeline = [
+                { $match: matchStage },
+                { $unwind: '$nurses' },
+            ];
+
+            if (nurseId) {
+                pipeline.push({
+                    $match: { 'nurses.nurseId': new mongoose.Types.ObjectId(nurseId) },
+                });
+            }
+
+            // Project relevant fields
+            pipeline.push({
+                $project: {
+                    _id: '$nurses._id',
+                    date: '$date',
+                    nurseId: '$nurses.nurseId',
+                    nurseName: '$nurses.nurseName',
+                    attended: '$nurses.attended',
+                    price: '$nurses.shiftPrice',
+                },
+            });
+
+            // Execute aggregation for shifts
+            const shifts = await NightShift.aggregate(pipeline);
+
+            // Calculate summary
+            const summary = {
+                totalShifts: shifts.length,
+                totalCost: shifts.reduce((sum, shift) => sum + (shift.price || 0), 0),
+            };
+
+            // Format response
+            const response = {
+                shifts: shifts.map(shift => ({
+                    _id: shift._id,
+                    date: shift.date.toISOString().split('T')[0], // YYYY-MM-DD
+                    nurseId: shift.nurseId,
+                    nurseName: shift.nurseName,
+                    attended: shift.attended,
+                    price: shift.price,
+                })),
+                summary,
+            };
+
+            res.status(200).json(response);
+        } catch (error) {
+            console.error('Error fetching reports:', error);
+            res.status(500).json({ message: 'Server error while fetching reports' });
+        }
+    };
 }
 
 module.exports = new NightShiftController();
