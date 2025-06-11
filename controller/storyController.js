@@ -107,8 +107,6 @@ class StoryController {
         .populate("patientId")
         .populate("doctorId");
 
-      console.log(stories.length);
-
       if (!stories.length) return response.notFound(res, "Bemorlar topilmadi");
       return response.success(res, "Bemorlar topildi", stories);
     } catch (err) {
