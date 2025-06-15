@@ -1,6 +1,5 @@
 require("dotenv").config();
 const express = require("express");
-// const { connect } = require("mongoose");
 const connectDB = require("./config/dbConfig"); // yoki ./utils/connect
 
 const cors = require("cors");
@@ -25,14 +24,6 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
-
-// MongoDB ulanish
-// (async () => {
-//   await connect(process.env.MONGO_URI)
-//     .then(() => console.log("MongoDBga ulanish muvaffaqiyatli! ✅✅✅"))
-//     .catch((err) => console.log("MongoDB ulanish xatosi: 🛑🛑🛑", err));
-// })();
-
 (async () => {
   await connectDB();
 })();
@@ -41,6 +32,7 @@ app.use(cors(corsOptions));
 app.set("socket", io);
 soket.connect(io);
 
+app.use("/uploads", express.static("uploads"));
 app.use("/api", authMiddleware, router); // Routerlarni ulash
 app.get("/", (req, res) => res.send("Salom dunyo")); // Bosh sahifa
 app.use(notfound); // 404 middleware

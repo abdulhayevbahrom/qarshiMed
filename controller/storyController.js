@@ -100,12 +100,11 @@ class StoryController {
     }
   }
 
-
   async patientsByDoctor(req, res) {
     const { doctorId } = req.params;
 
     if (!doctorId) {
-      return response.notFound(res, 'Doktor id talab qilinadi');
+      return response.notFound(res, "Doktor id talab qilinadi");
     }
 
     try {
@@ -130,23 +129,26 @@ class StoryController {
       });
 
       // Ko‘rilmagan bemorlarni topamiz
-      const stories = await storyDB.find({ doctorId, view: false })
-        .populate('patientId')
+      const stories = await storyDB
+        .find({ doctorId, view: false })
+        .populate("patientId")
         .sort({ startTime: 1 });
 
       const patients = [];
 
       for (let story of stories) {
         // Shu doctor va shu bemorga oid boshqa tarixlar
-        const visitHistoryData = await storyDB.find({
-          doctorId,
-          patientId: story.patientId._id,
-          _id: { $ne: story._id }, // hozirgi yozuvdan tashqari
-        }).sort({ startTime: -1 });
+        const visitHistoryData = await storyDB
+          .find({
+            doctorId,
+            patientId: story.patientId._id,
+            _id: { $ne: story._id }, // hozirgi yozuvdan tashqari
+          })
+          .sort({ startTime: -1 });
 
-        const visitHistory = visitHistoryData.map(item => ({
-          date: item.startTime.toISOString().split('T')[0],
-          diagnosis: item.sickname || 'Nomaʼlum tashxis',
+        const visitHistory = visitHistoryData.map((item) => ({
+          date: item.startTime.toISOString().split("T")[0],
+          diagnosis: item.sickname || "Nomaʼlum tashxis",
         }));
 
         patients.push({
@@ -174,15 +176,13 @@ class StoryController {
         });
       }
 
-
       const innerData = {
         patients,
         todayViewedCount,
         todayUnviewedCount,
-      }
+      };
 
       return response.success(res, "Bemorlar topildi", innerData);
-
     } catch (err) {
       return response.serverError(res, err.message, err);
     }
@@ -194,17 +194,20 @@ class StoryController {
 
     // Validate required parameters
     if (!doctorId || !_id) {
-      return response.notFound(res, 'Doktor ID va tashrif ID talab qilinadi');
+      return response.notFound(res, "Doktor ID va tashrif ID talab qilinadi");
     }
 
     try {
       // Fetch the specific visit (story) by _id and doctorId
       const story = await storyDB
         .findOne({ _id, doctorId, view: false })
-        .populate('patientId');
+        .populate("patientId");
 
       if (!story) {
-        return response.notFound(res, 'Tashrif topilmadi yoki allaqachon ko‘rilgan');
+        return response.notFound(
+          res,
+          "Tashrif topilmadi yoki allaqachon ko‘rilgan"
+        );
       }
 
       // Fetch visit history for the same doctor and patient, excluding the current visit
@@ -217,8 +220,8 @@ class StoryController {
         .sort({ startTime: -1 });
 
       const visitHistory = visitHistoryData.map((item) => ({
-        date: item.startTime.toISOString().split('T')[0],
-        diagnosis: item.sickname || 'Nomaʼlum tashxis',
+        date: item.startTime.toISOString().split("T")[0],
+        diagnosis: item.sickname || "Nomaʼlum tashxis",
       }));
 
       // Construct the patient data object
@@ -248,12 +251,48 @@ class StoryController {
         visitHistory,
       };
 
-      return response.success(res, 'Bemor maʼlumotlari topildi', patientData);
+      return response.success(res, "Bemor maʼlumotlari topildi", patientData);
     } catch (err) {
       return response.serverError(res, err.message, err);
     }
   }
 
+  async visitPatient(req, res) {
+    try {
+      const { diagnosis, prescription, recommendations } = req.body;
+
+      const files = req.files.map((file) => ({
+        filename: file.originalname,
+        url: file.path,
+      }));
+
+      // Mana shu yerda bemorga qo‘shiladi
+      const retsept = {
+        diagnosis,
+        prescription,
+        recommendations,
+      };
+
+      const story = await storyDB.findByIdAndUpdate(
+        req.params.id,
+        {
+          view: true,
+          endTime: new Date(),
+          retsept,
+          files,
+        },
+        { new: true }
+      );
+
+      if (!story) {
+        return response.notFound(res, "Tashrif topilmadi");
+      }
+
+      return response.success(res, "Tashrif ko‘rib chiqildi", story);
+    } catch (err) {
+      return response.serverError(res, err.message, err);
+    }
+  }
 }
 
 module.exports = new StoryController();

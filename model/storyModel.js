@@ -40,7 +40,6 @@ const storySchema = new Schema(
     files: [
       {
         filename: String,
-        fileType: String, // image/jpeg, application/pdf, va h.k.
         url: String, // faylga kirish uchun havola
       },
     ],
