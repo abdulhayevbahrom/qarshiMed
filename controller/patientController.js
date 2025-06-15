@@ -18,6 +18,7 @@ class PatientController {
         payment_amount,
         services, // Extract services from req.body
         doctorId,
+        description
       } = req.body;
 
       // Telefon raqami orqali bemorni qidirish
@@ -71,6 +72,7 @@ class PatientController {
         payment_status: paymentStatus,
         payment_amount,
         services: services || [], // Save services to storyDB
+        description: description || []
       });
 
       return response.success(res, 'Bemor va story muvaffaqiyatli yaratildi', {

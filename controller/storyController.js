@@ -190,8 +190,6 @@ class StoryController {
 
   async getPatientVisit(req, res) {
     const { doctorId, _id } = req.query;
-    console.log(doctorId, _id);
-
     // Validate required parameters
     if (!doctorId || !_id) {
       return response.notFound(res, "Doktor ID va tashrif ID talab qilinadi");
@@ -244,6 +242,7 @@ class StoryController {
         payment_status: story.payment_status,
         payment_amount: story.payment_amount,
         sickname: story.sickname,
+        description: story.description,
         view: story.view,
         order_number: story.order_number,
         startTime: story.startTime,

@@ -44,15 +44,10 @@ class AttendanceController {
     // Check-in logic
     static async checkIn(req, res) {
         try {
-            const { employee_id } = req.body;
+            const { employee_id } = req.params;
             const employee = await Admin.findById(employee_id);
             if (!employee) {
                 return response.notFound(res, "Ishchi topilmadi");
-            }
-
-            const clinic = await Clinic.findOne();
-            if (!clinic) {
-                return response.error(res, "Klinika topilmadi");
             }
 
             const schedule = await this.getWorkSchedule();
