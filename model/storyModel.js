@@ -15,7 +15,7 @@ const storySchema = new Schema(
     paymentType: {
       type: String,
       enum: ["karta", "naqt"],
-      required: true,
+      // required: true,
     },
     payment_status: {
       type: Boolean,
@@ -23,7 +23,7 @@ const storySchema = new Schema(
     },
     payment_amount: {
       type: Number,
-      required: true,
+      // required: true,
     },
     sickname: {
       type: String,
@@ -58,8 +58,8 @@ const storySchema = new Schema(
 
     startTime: {
       type: Date,
-      default: Date.now,
-      required: true,
+      // default: Date.now,
+      // required: true,
     },
     endTime: {
       type: Date,
@@ -75,6 +75,10 @@ const storySchema = new Schema(
     description: {
       type: String,
     },
+    redirectStatus: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -82,7 +86,6 @@ const storySchema = new Schema(
 );
 
 module.exports = model("stories", storySchema);
-
 
 //   diagnosis,
 //   prescription,

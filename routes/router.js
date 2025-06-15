@@ -69,6 +69,11 @@ router.put("/client/update/:id", patientController.updatePatient);
 router.put("/client/updateBmi/:id", patientController.updatePatientBmi);
 router.delete("/client/delete/:id", patientController.deletePatient);
 
+// redirect to story
+router.post("/story/redirect", patientController.redirectPatient);
+router.post("/story/updateRedirect", patientController.updateRedirectPatient);
+router.get("/story/redirected", patientController.getRedirectPatients);
+
 /**
  * ============================
  * Story Routes

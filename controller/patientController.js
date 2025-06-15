@@ -18,7 +18,7 @@ class PatientController {
         payment_amount,
         services, // Extract services from req.body
         doctorId,
-        description
+        description,
       } = req.body;
 
       // Telefon raqami orqali bemorni qidirish
@@ -36,7 +36,7 @@ class PatientController {
       }
 
       // Validate doctorId
-      if (!doctorId) return response.error(res, 'doctorId is required');
+      if (!doctorId) return response.error(res, "doctorId is required");
 
       // Shu doktorga yozilgan, view: false bo'lgan storylarni sanash
       const today = new Date();
@@ -54,14 +54,19 @@ class PatientController {
       const orderNumber = count + 1;
 
       let doctor = await adminDB.findById(doctorId);
-      if (!doctor) return response.error(res, 'Doctor not found');
+      if (!doctor) return response.error(res, "Doctor not found");
 
       // Calculate total service price (if services provided)
-      const totalServicePrice = services.reduce((sum, service) => sum + service.price || 0);
+      const totalServicePrice = services.reduce(
+        (sum, service) => sum + service.price || 0
+      );
 
       // Update payment_status logic (optional)
       // Example: Check if payment_amount matches doctor's admission_price + service prices
-      const paymentStatus = doctor && payment_amount === doctor && admission_price + totalServicePrice;
+      const paymentStatus =
+        doctor &&
+        payment_amount === doctor &&
+        admission_price + totalServicePrice;
 
       // Story yaratish
       const story = await storyDB.create({
@@ -72,10 +77,10 @@ class PatientController {
         payment_status: paymentStatus,
         payment_amount,
         services: services || [], // Save services to storyDB
-        description: description || []
+        description: description || "",
       });
 
-      return response.success(res, 'Bemor va story muvaffaqiyatli yaratildi', {
+      return response.success(res, "Bemor va story muvaffaqiyatli yaratildi", {
         patient: {
           firstname,
           lastname,
@@ -95,8 +100,8 @@ class PatientController {
         services: services || [], // Return services in response
       });
     } catch (err) {
-      console.error('Error in createPatient:', err);
-      return response.serverError(res, 'Server error occurred', err.message);
+      console.error("Error in createPatient:", err);
+      return response.serverError(res, "Server error occurred", err.message);
     }
   }
 
@@ -142,7 +147,7 @@ class PatientController {
       const { height, weight, bloodGroup } = req.body;
 
       if (!id) {
-        return response.notFound(res, 'Patient ID is required');
+        return response.notFound(res, "Patient ID is required");
       }
 
       const updateData = {};
@@ -152,7 +157,9 @@ class PatientController {
 
       if (height && weight) {
         const heightInMeters = Number(height) / 100;
-        updateData.bmi = Number((Number(weight) / (heightInMeters * heightInMeters)).toFixed(2));
+        updateData.bmi = Number(
+          (Number(weight) / (heightInMeters * heightInMeters)).toFixed(2)
+        );
       } else if (height === null || weight === null) {
         updateData.bmi = null;
       }
@@ -164,11 +171,10 @@ class PatientController {
       );
 
       if (!updatedPatient) {
-        return response.notFound(res, 'Patient not found');
+        return response.notFound(res, "Patient not found");
       }
 
-      response.success(res, 'Patient updated successfully', updatedPatient);
-
+      response.success(res, "Patient updated successfully", updatedPatient);
     } catch (error) {
       return response.serverError(res, error.message, error);
     }
@@ -180,6 +186,108 @@ class PatientController {
       const patient = await patientsDB.findByIdAndDelete(req.params.id);
       if (!patient) return response.notFound(res, "Bemor topilmadi");
       return response.success(res, "Bemor o'chirildi", patient);
+    } catch (err) {
+      return response.serverError(res, err.message, err);
+    }
+  }
+
+  async redirectPatient(req, res) {
+    try {
+      let { storyId, newDoctorId, services } = req.body;
+      console.log(storyId);
+
+      let story = await storyDB.findById(storyId);
+      if (!story) return response.notFound(res, "Story topilmadi");
+      let newStory = {
+        patientId: story?.patientId,
+        doctorId: newDoctorId,
+        redirectStatus: true,
+        services: services,
+      };
+      console.log(newStory);
+
+      let result = await storyDB.create(newStory);
+      if (!result) return response.notFound(res, "Story topilmadi");
+      return response.success(res, "Story yaratildi", result);
+    } catch (err) {
+      return response.serverError(res, err.message, err);
+    }
+  }
+
+  async updateRedirectPatient(req, res) {
+    try {
+      const { storyId, paymentType, payment_amount } = req.body;
+
+      // Storyni topish va patient/doctor ma'lumotlarini populate qilish
+      const story = await storyDB
+        .findById(storyId)
+        .populate("patientId")
+        .populate("doctorId");
+      if (!story) return response.notFound(res, "Story topilmadi", "hatolik");
+
+      // Xizmatlar narxini hisoblash
+      const servicesPrice = (story.services || []).reduce(
+        (total, service) => total + (service.price || 0),
+        0
+      );
+
+      // Navbat raqamini hisoblash
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+
+      const count = await storyDB.countDocuments({
+        doctorId: story.doctorId._id,
+        view: false,
+        createdAt: { $gte: today, $lt: tomorrow },
+      });
+      const order_number = count + 1;
+
+      // Storyni yangilash
+      story.paymentType = paymentType;
+      story.payment_amount = payment_amount;
+      story.payment_status = payment_amount >= servicesPrice;
+      story.redirectStatus = false;
+      story.order_number = order_number;
+      await story.save();
+
+      return response.success(res, "Bemor va story muvaffaqiyatli yangilandi", {
+        patient: {
+          firstname: story.patientId.firstname,
+          lastname: story.patientId.lastname,
+          phone: story.patientId.phone,
+          idNumber: story.patientId.idNumber,
+          address: story.patientId.address,
+          order_number,
+          createdAt: story.createdAt,
+        },
+        doctor: {
+          firstName: story.doctorId.firstName,
+          lastName: story.doctorId.lastName,
+          specialization: story.doctorId.specialization,
+          phone: story.doctorId.phone,
+          admission_price: servicesPrice,
+        },
+        services: story.services || [],
+      });
+    } catch (err) {
+      console.error("Error in updateRedirectPatient:", err);
+      return response.serverError(res, err.message, err);
+    }
+  }
+
+  async getRedirectPatients(req, res) {
+    try {
+      let allRedirectedPatients = await storyDB.find({ redirectStatus: true });
+      if (allRedirectedPatients.length === 0) {
+        return response.notFound(res, "Yo'naltirilgan bemorlar topilmadi");
+      }
+      return response.success(
+        res,
+        "Yo'naltirilgan bemorlar topildi",
+        allRedirectedPatients
+      );
     } catch (err) {
       return response.serverError(res, err.message, err);
     }
