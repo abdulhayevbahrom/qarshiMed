@@ -24,9 +24,7 @@ const adminValidation = (req, res, next) => {
       },
       permissions: {
         type: "array",
-        items: {
-          type: "string",
-        },
+        items: { type: "string" },
         uniqueItems: true,
       },
       salary_per_month: {
@@ -41,11 +39,13 @@ const adminValidation = (req, res, next) => {
         minLength: 7,
         maxLength: 15,
       },
+      roomId: {
+        type: "string",
+        pattern: "^[0-9a-fA-F]{24}$",
+      },
       servicesId: {
-        type: "array",
-        items: {
-          type: "string",
-        },
+        type: "string",
+        pattern: "^[0-9a-fA-F]{24}$",
       },
       birthday: {
         type: "string",
@@ -61,6 +61,10 @@ const adminValidation = (req, res, next) => {
       },
       idCardNumber: {
         type: "string",
+      },
+      admission_price: {
+        type: "number",
+        minimum: 0,
       },
     },
     required: [
@@ -87,17 +91,19 @@ const adminValidation = (req, res, next) => {
         address: "Manzil 2-100 ta belgi oralig‘ida bo‘lishi kerak",
         login: "Login 4-20 ta belgidan iborat, faqat harflar va raqamlar",
         password: "Parol 6-50 ta belgi oralig‘ida bo‘lishi kerak",
-        role: "Rol noto‘g‘ri (faqat 'reception', 'director', 'doctor')",
+        role: "Rol noto‘g‘ri (faqat 'reception', 'director', 'doctor', 'nurse', 'cleaner')",
         permissions:
           "Ruxsatlar ro‘yxati takrorlanmaydigan stringlardan iborat bo‘lishi kerak",
-        salary_per_month: "Oylik maosh 0 dan katta son bo‘lishi kerak",
+        salary_per_month: "Oylik maosh 0 dan katta yoki teng son bo‘lishi kerak",
         specialization: "Yo‘nalish noto‘g‘ri",
-        phone: "Telefon raqam noto‘g‘ri",
-        servicesId: "Services id noto‘g‘ri",
+        phone: "Telefon raqam 7-15 ta belgi oralig‘ida bo‘lishi kerak",
+        servicesId: "Services ID noto‘g‘ri (24 ta belgi ObjectId formatida)",
         birthday: "Tug‘ilgan sana noto‘g‘ri formatda (YYYY-MM-DD)",
         salary_type: "Maosh turi noto‘g‘ri (fixed yoki percentage)",
-        percentage_from_admissions: "Foiz noto‘g‘ri (0 dan katta son)",
+        percentage_from_admissions: "Foiz 0 dan katta yoki teng son bo‘lishi kerak",
         idCardNumber: "ID karta raqami noto‘g‘ri",
+        admission_price: "Qabul narxi 0 dan katta yoki teng son bo‘lishi kerak",
+        roomId: "Xonalar ro‘yxati takrorlanmaydigan stringlardan iborat bo‘lishi kerak",
       },
       additionalProperties: "Ruxsat etilmagan maydon kiritildi",
     },
@@ -110,7 +116,7 @@ const adminValidation = (req, res, next) => {
     const errorField =
       validate.errors[0].instancePath.replace("/", "") || "Umumiy";
     const errorMessage = validate.errors[0].message;
-    return response.error(res, `${errorField} xato: ${errorMessage}`,validate.errors);
+    return response.error(res, `${errorField} xato: ${errorMessage}`);
   }
 
   next();

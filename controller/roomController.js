@@ -39,7 +39,7 @@ class RoomController {
   // Barcha xonalarni olish
   async getRooms(req, res) {
     try {
-      const rooms = await Room.find().populate({
+      const rooms = await Room.find().populate("cleaner").populate("nurse").populate("doctorId").populate({
         path: "capacity",
         populate: [{ path: "patientId" }, { path: "doctorId" }],
       });
@@ -99,6 +99,7 @@ class RoomController {
   // Xonani yangilash
   async updateRoom(req, res) {
     try {
+      console.log(req.body);
       const room = await Room.findByIdAndUpdate(req.params.id, req.body, {
         new: true,
       });
@@ -109,6 +110,46 @@ class RoomController {
     }
   }
 
+  async updateRoomCleanStatus(req, res) {
+    try {
+      const { id } = req.params;
+      const { isCleaned } = req.body;
+
+      // Validate input
+      if (typeof isCleaned !== 'boolean') {
+        return res.status(400).json({
+          success: false,
+          message: 'isCleaned must be a boolean value'
+        });
+      }
+
+      // Update only isCleaned field
+      const updatedRoom = await Room.findByIdAndUpdate(
+        id,
+        { isCleaned },
+        { new: true, runValidators: true }
+      ).select('isCleaned roomNumber name');
+
+      if (!updatedRoom) {
+        return res.status(404).json({
+          success: false,
+          message: 'Room not found'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Room clean status updated successfully',
+        data: updatedRoom
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: 'Server error',
+        error: error.message
+      });
+    }
+  }
   // Xonani o'chirish
   async deleteRoom(req, res) {
     try {
@@ -353,12 +394,21 @@ class RoomController {
 
       // Bemorni xonadan o‘chiramiz
       room.capacity = room.capacity.filter((id) => id.toString() !== patientId);
+
+      // Beds arrayida "toza" yoki "bo'sh" statusli joyni topib, "toza emas" qilamiz
+      const bedToUpdate = room.beds.find(
+        (bed) => bed.status === "toza" || bed.status === "bo'sh"
+      );
+      if (bedToUpdate) {
+        bedToUpdate.status = "toza emas";
+      }
+
       await room.save({ session });
 
       await session.commitTransaction();
       session.endSession();
 
-      return response.success(res, "Bemor honadan chiqarildi", {
+      return response.success(res, "Bemor xonadan chiqarildi", {
         room,
         updatedStory: activeStory,
       });
@@ -368,6 +418,7 @@ class RoomController {
       return response.serverError(res, err.message, err);
     }
   }
+
 
   async payForRoom(req, res) {
     const session = await mongoose.startSession();

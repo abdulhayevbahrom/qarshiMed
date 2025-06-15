@@ -1,4 +1,5 @@
 const response = require("../utils/response");
+const mongoose = require("mongoose");
 const adminsDB = require("../model/adminModel");
 const storiesDB = require("../model/storyModel");
 const bcrypt = require("bcrypt");
@@ -8,7 +9,7 @@ class AdminController {
   // Barcha adminlarni olish (Read - All)
   async getAdmins(req, res) {
     try {
-      const admins = await adminsDB.find().select("-password"); // Parolni chiqarmaslik uchun
+      const admins = await adminsDB.find().select("-password").populate("roomId").populate("servicesId"); // Parolni chiqarmaslik uchun
       if (!admins.length) return response.notFound(res, "Adminlar topilmadi");
       response.success(res, "Barcha adminlar", admins);
     } catch (err) {
@@ -24,9 +25,32 @@ class AdminController {
       const tomorrow = new Date(today);
       tomorrow.setDate(today.getDate() + 1);
 
-      // Aggregation orqali doctorlar va bugungi navbat soni
+      // Aggregation pipeline
       const result = await adminsDB.aggregate([
-        { $match: { role: "doctor" } },
+        // Match doctors with a valid servicesId
+        {
+          $match: {
+            role: "doctor",
+            servicesId: { $ne: null }, // Exclude admins without servicesId
+          },
+        },
+        // Lookup Services collection to get services array
+        {
+          $lookup: {
+            from: "services", // Collection name (lowercase, as MongoDB stores it)
+            localField: "servicesId",
+            foreignField: "_id",
+            as: "serviceDetails",
+          },
+        },
+        // Unwind serviceDetails to include services array
+        {
+          $unwind: {
+            path: "$serviceDetails",
+            preserveNullAndEmptyArrays: false, // Exclude if no matching service
+          },
+        },
+        // Lookup stories for today's queue
         {
           $lookup: {
             from: "stories",
@@ -48,19 +72,23 @@ class AdminController {
             as: "todayStories",
           },
         },
+        // Project required fields
         {
           $project: {
             _id: 1,
             firstName: 1,
             lastName: 1,
             specialization: 1,
-            admission_price: 1,
+            // admission_price: 1, // Uncomment if needed
             todayQueue: { $size: "$todayStories" },
+            services: "$serviceDetails.services", // Include services array
           },
         },
       ]);
 
-      if (!result.length) return response.notFound(res, "Adminlar topilmadi");
+      if (!result.length) {
+        return response.notFound(res, "Adminlar topilmadi");
+      }
       response.success(res, "Barcha adminlar", result);
     } catch (err) {
       response.serverError(res, err.message, err);
@@ -196,6 +224,83 @@ class AdminController {
       });
     } catch (err) {
       response.serverError(res, err.message, err);
+    }
+  }
+
+
+
+  async updateServicesId(req, res) {
+    try {
+      const { id } = req.params; // Admin ID from URL params
+      const { servicesId } = req.body; // New servicesId from request body
+
+      // Validate Admin ID
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return response.error(res, "Invalid Admin ID", 400);
+      }
+
+      // Validate servicesId
+      if (!mongoose.Types.ObjectId.isValid(servicesId)) {
+        return response.error(res, "Invalid Services ID", 400);
+      }
+
+      // Find and update the Admin document
+      const updatedAdmin = await adminsDB.findByIdAndUpdate(
+        id,
+        { servicesId },
+        { new: true, runValidators: true } // Return updated document, run schema validators
+      );
+
+      // Check if Admin exists
+      if (!updatedAdmin) {
+        return response.error(res, "Admin not found", 404);
+      }
+
+      // Return success response
+      return response.success(res, "Services ID updated successfully", updatedAdmin);
+    } catch (error) {
+      console.error("Error updating servicesId:", error);
+      return response.error(res, "Server error", 500);
+    }
+  }
+
+
+  async updateRoomId(req, res) {
+    try {
+      const { adminId } = req.params;
+      const { roomId } = req.body;
+
+      // Validate adminId
+      if (!mongoose.Types.ObjectId.isValid(adminId)) {
+        return response.error(res, "Invalid admin ID", 400);
+      }
+
+      // Validate roomId (if provided)
+      if (roomId && !mongoose.Types.ObjectId.isValid(roomId)) {
+        return response.error(res, "Invalid room ID", 400);
+      }
+
+      // Check if admin exists
+      const admin = await adminsDB.findById(adminId);
+      if (!admin) {
+        return response.notFound(res, "Admin not found");
+      }
+
+      // Update roomId (allow null to unset the field)
+      admin.roomId = roomId || null;
+      await admin.save();
+
+      // Prepare response data
+      const adminData = admin.toJSON();
+      delete adminData.password;
+
+      return response.success(res, "Room ID updated successfully", {
+        adminId: admin._id,
+        roomId: admin.roomId,
+      });
+    } catch (error) {
+      console.error("Error updating roomId:", error);
+      return response.serverError(res, error.message, error);
     }
   }
 }

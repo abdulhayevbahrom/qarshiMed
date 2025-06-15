@@ -48,10 +48,10 @@ const AdminSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    // admission_price: {
-    //   type: Number,
-    //   default: 0,
-    // },
+    roomId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Room",
+    },
     birthday: {
       type: Date,
     },

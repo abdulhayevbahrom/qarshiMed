@@ -16,9 +16,12 @@ class PatientController {
         gender,
         paymentType,
         payment_amount,
+        services, // Extract services from req.body
+        doctorId,
       } = req.body;
+
       // Telefon raqami orqali bemorni qidirish
-      let patient = await patientsDB.findOne({ phone: req.body.phone });
+      let patient = await patientsDB.findOne({ phone });
       if (!patient) {
         patient = await patientsDB.create({
           firstname,
@@ -31,9 +34,8 @@ class PatientController {
         });
       }
 
-      // doctorId ni body dan olish
-      const doctorId = req.body.doctorId;
-      if (!doctorId) return response.serverError(res, "doctorId kiritilmagan");
+      // Validate doctorId
+      if (!doctorId) return response.error(res, 'doctorId is required');
 
       // Shu doktorga yozilgan, view: false bo'lgan storylarni sanash
       const today = new Date();
@@ -43,45 +45,56 @@ class PatientController {
 
       const count = await storyDB.countDocuments({
         doctorId: doctorId,
-        view: false,
+        view: 0,
         createdAt: { $gte: today, $lt: tomorrow },
       });
 
       // order_number = navbat raqami
-      const order_number = count + 1;
+      const orderNumber = count + 1;
 
-      let doctor = await adminDB.findById(doctorId);  
+      let doctor = await adminDB.findById(doctorId);
+      if (!doctor) return response.error(res, 'Doctor not found');
+
+      // Calculate total service price (if services provided)
+      const totalServicePrice = services.reduce((sum, service) => sum + service.price || 0);
+
+      // Update payment_status logic (optional)
+      // Example: Check if payment_amount matches doctor's admission_price + service prices
+      const paymentStatus = doctor && payment_amount === doctor && admission_price + totalServicePrice;
 
       // Story yaratish
       const story = await storyDB.create({
         patientId: patient._id,
         doctorId,
-        order_number,
+        order_number: orderNumber,
         paymentType,
-        payment_status: doctor.admission_price === payment_amount,
+        payment_status: paymentStatus,
         payment_amount,
+        services: services || [], // Save services to storyDB
       });
 
-      return response.success(res, "Bemor va story yaratildi", {
+      return response.success(res, 'Bemor va story muvaffaqiyatli yaratildi', {
         patient: {
           firstname,
           lastname,
           phone,
           idNumber,
           address,
-          order_number,
-          cretedAt: story.createdAt,
+          order_number: orderNumber,
+          createdAt: story.createdAt,
         },
         doctor: {
-          firstname: doctor.firstName,
-          lastname: doctor.lastName,
+          firstName: doctor.firstName,
+          lastName: doctor.lastName,
           specialization: doctor.specialization,
-          phone: doctor.phone,
-          admission_price: doctor.admission_price,
+          phone: phone,
+          admission_price: totalServicePrice,
         },
+        services: services || [], // Return services in response
       });
     } catch (err) {
-      return response.serverError(res, err.message, err);
+      console.error('Error in createPatient:', err);
+      return response.serverError(res, 'Server error occurred', err.message);
     }
   }
 
@@ -118,6 +131,44 @@ class PatientController {
       return response.success(res, "Bemor yangilandi", patient);
     } catch (err) {
       return response.serverError(res, err.message, err);
+    }
+  }
+  // router.put('/client/update/:id', async (req, res) => {
+  async updatePatientBmi(req, res) {
+    try {
+      const { id } = req.params;
+      const { height, weight, bloodGroup } = req.body;
+
+      if (!id) {
+        return response.notFound(res, 'Patient ID is required');
+      }
+
+      const updateData = {};
+      if (height !== undefined) updateData.height = Number(height) || null;
+      if (weight !== undefined) updateData.weight = Number(weight) || null;
+      if (bloodGroup !== undefined) updateData.bloodGroup = bloodGroup || null;
+
+      if (height && weight) {
+        const heightInMeters = Number(height) / 100;
+        updateData.bmi = Number((Number(weight) / (heightInMeters * heightInMeters)).toFixed(2));
+      } else if (height === null || weight === null) {
+        updateData.bmi = null;
+      }
+
+      const updatedPatient = await patientsDB.findByIdAndUpdate(
+        id,
+        { $set: updateData },
+        { new: true, runValidators: true }
+      );
+
+      if (!updatedPatient) {
+        return response.notFound(res, 'Patient not found');
+      }
+
+      response.success(res, 'Patient updated successfully', updatedPatient);
+
+    } catch (error) {
+      return response.serverError(res, error.message, error);
     }
   }
 

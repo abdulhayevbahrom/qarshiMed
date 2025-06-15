@@ -28,6 +28,8 @@ router.get("/admin/:id", adminController.getAdminById);
 router.post("/admin/create", adminValidation, adminController.createAdmin);
 router.put("/admin/update/:id", adminValidation, adminController.updateAdmin);
 router.delete("/admin/delete/:id", adminController.deleteAdmin);
+router.put("/admin/:id/servicesId", adminController.updateServicesId);
+router.put("/admins/:adminId/room", adminController.updateRoomId);
 
 /**
  * ============================
@@ -52,6 +54,7 @@ router.post("/client/create", patientController.createPatient);
 router.get("/client/all", patientController.getPatients);
 router.get("/client/:id", patientController.getPatientById);
 router.put("/client/update/:id", patientController.updatePatient);
+router.put("/client/updateBmi/:id", patientController.updatePatientBmi);
 router.delete("/client/delete/:id", patientController.deletePatient);
 
 /**
@@ -64,6 +67,8 @@ router.get("/story/patient/:id", storyController.getStoryByPatientId);
 router.get("/story/doctor/:id", storyController.getStoryByDoctorId);
 router.put("/story/update/:id", storyController.updateStory);
 router.get("/story/todays", storyController.getTodaysStory);
+router.get("/story/patients-by-doctor/:doctorId", storyController.patientsByDoctor);
+router.get("/story/todayVisit", storyController.getPatientVisit);
 
 /**
  * ============================
@@ -87,7 +92,8 @@ router.post("/room/create", roomValidation, roomController.createRoom);
 router.get("/room/all", roomController.getRooms);
 router.get("/room/stories", roomController.getRoomStories);
 router.get("/room/:id", roomController.getRoomById);
-router.put("/room/update/:id", roomValidation, roomController.updateRoom);
+router.put("/room/update/:id", roomController.updateRoom);
+router.put("/roomStatus/update/:id", roomController.updateRoomCleanStatus);
 router.delete("/room/delete/:id", roomController.deleteRoom);
 router.patch("/room/closeRoom/:id", roomController.closeRoom);
 router.patch("/room/addPatient/:id", roomController.addPatientToRoom);

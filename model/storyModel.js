@@ -1,40 +1,93 @@
-const { Schema, model } = require("mongoose");
-const mongoose = require("mongoose");
+const { Schema, model, Types } = require("mongoose");
 
-const schema = new Schema(
+const storySchema = new Schema(
   {
     patientId: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
+      type: Types.ObjectId,
       ref: "patients",
+      required: true,
     },
     doctorId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Types.ObjectId,
       ref: "Admins",
       required: true,
     },
-    paymentType: { type: String, enum: ["karta", "naqt"], required: true },
-    payment_status: { type: Boolean, default: false },
-    payment_amount: { type: Number, required: true },
-    sickname: { type: String },
-    view: { type: Boolean, default: false },
-    order_number: { type: Number },
-    retseptList: { type: String },
-    description: { type: String },
-    rentgen: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Rentgen",
+    paymentType: {
+      type: String,
+      enum: ["karta", "naqt"],
+      required: true,
     },
+    payment_status: {
+      type: Boolean,
+      default: false,
+    },
+    payment_amount: {
+      type: Number,
+      required: true,
+    },
+    sickname: {
+      type: String,
+    },
+    view: {
+      type: Boolean,
+      default: false,
+    },
+    order_number: {
+      type: Number,
+    },
+
+    // Fayllar (rasm, hujjat va h.k.)
+    files: [
+      {
+        filename: String,
+        fileType: String, // image/jpeg, application/pdf, va h.k.
+        url: String, // faylga kirish uchun havola
+      },
+    ],
+
+    // Retsept (davolash bo‘yicha yozuvlar)
+    retsept: {
+      diagnosis: { type: String },
+      prescription: { type: String },
+      recommendations: { type: String },
+    },
+
     labaratoryResult: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Types.ObjectId,
       ref: "Labaratory",
     },
-    startTime: { type: Date, required: true, default: Date.now },
-    endTime: { type: Date },
+
+    startTime: {
+      type: Date,
+      default: Date.now,
+      required: true,
+    },
+    endTime: {
+      type: Date,
+    },
+
+    services: [
+      {
+        name: { type: String, required: true },
+        price: { type: Number, required: true },
+      },
+    ],
+
+    description: {
+      type: String,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-const StoriesDB = model("stories", schema);
+module.exports = model("stories", storySchema);
 
-module.exports = StoriesDB;
+
+//   diagnosis,
+//   prescription,
+//   recommendations,
+//   uploadedFiles,
+//   view: true,
+//   endTime: ,
