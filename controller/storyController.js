@@ -258,7 +258,8 @@ class StoryController {
 
   async visitPatient(req, res) {
     try {
-      const { diagnosis, prescription, recommendations } = req.body;
+      const { diagnosis, prescription, recommendations, description } =
+        req.body;
 
       const files = req.files.map((file) => ({
         filename: file.originalname,
@@ -278,6 +279,7 @@ class StoryController {
           view: true,
           endTime: new Date(),
           retsept,
+          description,
           files,
         },
         { new: true }
