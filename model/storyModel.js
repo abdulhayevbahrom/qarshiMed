@@ -90,4 +90,4 @@ module.exports = model("stories", storySchema);
 //   recommendations,
 //   uploadedFiles,
 //   view: true,
-//   endTime: ,
+//   endTime: new Date().toISOString(),
