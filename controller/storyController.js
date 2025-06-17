@@ -1,5 +1,7 @@
 const response = require("../utils/response");
 const storyDB = require("../model/storyModel");
+const PatientModel = require("../model/patientModel");
+const RoomStoryModel = require("../model/roomStoryModel");
 const moment = require("moment");
 
 class StoryController {
@@ -147,7 +149,7 @@ class StoryController {
           .sort({ startTime: -1 });
 
         const visitHistory = visitHistoryData.map((item) => ({
-          date: item.startTime.toISOString().split("T")[0],
+          date: item.startTime?.toISOString().split("T")[0],
           diagnosis: item.sickname || "Nomaʼlum tashxis",
         }));
 
@@ -292,6 +294,129 @@ class StoryController {
       return response.success(res, "Tashrif ko‘rib chiqildi", story);
     } catch (err) {
       return response.serverError(res, err.message, err);
+    }
+  }
+
+  //==========================================
+
+  async getAllPatientsStory(req, res) {
+    try {
+      const patients = await PatientModel.find()
+        .lean()
+        .exec();
+
+      const patientIds = patients.map(patient => patient._id);
+
+      const stories = await storyDB.find({ patientId: { $in: patientIds } })
+        .lean()
+        .exec();
+
+      const roomStories = await RoomStoryModel.find({ patientId: { $in: patientIds } })
+        .lean()
+        .exec();
+
+      const result = patients.map(patient => ({
+        ...patient,
+        stories: stories.filter(story => story.patientId.toString() === patient._id.toString()),
+        roomStories: roomStories.filter(roomStory => roomStory.patientId.toString() === patient._id.toString()),
+      }));
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Error fetching patients",
+        error: error.message,
+      });
+    }
+  }
+
+  // Get patient by ID with their stories and room stories
+  async getPatientStoryById(req, res) {
+    try {
+      const { patientId } = req.params;
+
+      const patient = await PatientModel.findById(patientId)
+        .lean()
+        .exec();
+
+      if (!patient) {
+        return res.status(404).json({
+          success: false,
+          message: "Patient not found",
+        });
+      }
+
+      const stories = await storyDB.find({ patientId })
+        .lean()
+        .exec();
+
+      const roomStories = await RoomStoryModel.find({ patientId })
+        .lean()
+        .exec();
+
+      const result = {
+        ...patient,
+        stories,
+        roomStories,
+      };
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Error fetching patient",
+        error: error.message,
+      });
+    }
+  }
+
+  // Get all patients by doctor ID with their stories and room stories
+  async getPatientsStoryByDoctorId(req, res) {
+    try {
+      const { doctorId } = req.params;
+
+      const stories = await storyDB.find({ doctorId })
+        .lean()
+        .exec();
+
+      const roomStories = await RoomStoryModel.find({ doctorId })
+        .lean()
+        .exec();
+
+      const patientIds = [
+        ...new Set([
+          ...stories.map(story => story.patientId.toString()),
+          ...roomStories.map(roomStory => roomStory.patientId.toString()),
+        ]),
+      ];
+
+      const patients = await PatientModel.find({ _id: { $in: patientIds } })
+        .lean()
+        .exec();
+
+      const result = patients.map(patient => ({
+        ...patient,
+        stories: stories.filter(story => story.patientId.toString() === patient._id.toString()),
+        roomStories: roomStories.filter(roomStory => roomStory.patientId.toString() === patient._id.toString()),
+      }));
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Error fetching patients by doctor",
+        error: error.message,
+      });
     }
   }
 }

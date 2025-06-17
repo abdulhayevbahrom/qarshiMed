@@ -4,12 +4,28 @@ const Clinic = require("../model/clinicInfo");
 const response = require("../utils/response");
 
 class AttendanceController {
-    // Default attendance settings (since removed from ClinicInfo)
+    // Default attendance settings
     static attendanceSettings = {
         grace_period_minutes: 15,
         early_leave_threshold_minutes: 30,
         overtime_threshold_minutes: 30,
     };
+
+    // Cache for NFC scans: Map<idCardNumber, { timestamp: Date, action: 'checkin' | 'checkout' }>
+    static scanCache = new Map();
+
+    // Cache expiration time (10 minutes in milliseconds)
+    static CACHE_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+
+    // Clean up expired cache entries
+    static cleanupCache() {
+        const now = new Date();
+        for (const [idCardNumber, { timestamp }] of this.scanCache.entries()) {
+            if (now - timestamp > this.CACHE_TIMEOUT) {
+                this.scanCache.delete(idCardNumber);
+            }
+        }
+    }
 
     // Utility to get work schedule
     static async getWorkSchedule() {
@@ -44,8 +60,12 @@ class AttendanceController {
     // Check-in logic
     static async checkIn(req, res) {
         try {
-            const { employee_id } = req.params;
-            const employee = await Admin.findById(employee_id);
+            const { idCardNumber } = req.params;
+            if (!idCardNumber) {
+                return response.error(res, "idCardNumber kiritilishi shart");
+            }
+
+            const employee = await Admin.findOne({ idCardNumber });
             if (!employee) {
                 return response.notFound(res, "Ishchi topilmadi");
             }
@@ -58,7 +78,13 @@ class AttendanceController {
             const today = new Date().toISOString().split("T")[0];
             const checkInTime = new Date();
 
-            const attendance = await Attendance.findOne({ employee_id, date: today });
+            // Check cache for recent check-in
+            const cacheEntry = this.scanCache.get(idCardNumber);
+            if (cacheEntry && new Date() - cacheEntry.timestamp < this.CACHE_TIMEOUT && cacheEntry.action === "checkin") {
+                return response.error(res, "10 minut ichida takroriy kelish qayd etilmaydi");
+            }
+
+            const attendance = await Attendance.findOne({ employee_id: employee._id, date: today });
             if (attendance?.check_in_time) {
                 return response.error(res, "Bugun allaqachon kelgan", attendance);
             }
@@ -76,7 +102,7 @@ class AttendanceController {
                     { new: true }
                 )
                 : new Attendance({
-                    employee_id,
+                    employee_id: employee._id,
                     date: today,
                     check_in_time: checkInTime,
                     late_minutes: lateMinutes,
@@ -84,6 +110,10 @@ class AttendanceController {
                 });
 
             await newAttendance.save();
+
+            // Update cache
+            this.scanCache.set(idCardNumber, { timestamp: new Date(), action: "checkin" });
+            this.cleanupCache();
 
             const populatedAttendance = await Attendance.findById(newAttendance._id).populate(
                 "employee_id",
@@ -105,11 +135,26 @@ class AttendanceController {
     // Check-out logic
     static async checkOut(req, res) {
         try {
-            const { employee_id } = req.body;
+            const { idCardNumber } = req.body;
+            if (!idCardNumber) {
+                return response.error(res, "idCardNumber kiritilishi shart");
+            }
+
+            const employee = await Admin.findOne({ idCardNumber });
+            if (!employee) {
+                return response.notFound(res, "Ishchi topilmadi");
+            }
+
             const today = new Date().toISOString().split("T")[0];
             const checkOutTime = new Date();
 
-            const attendance = await Attendance.findOne({ employee_id, date: today });
+            // Check cache for recent check-out
+            const cacheEntry = this.scanCache.get(idCardNumber);
+            if (cacheEntry && new Date() - cacheEntry.timestamp < this.CACHE_TIMEOUT && cacheEntry.action === "checkout") {
+                return response.error(res, "10 minut ichida takroriy ketish qayd etilmaydi");
+            }
+
+            const attendance = await Attendance.findOne({ employee_id: employee._id, date: today });
             if (!attendance || !attendance.check_in_time) {
                 return response.error(res, "Bugun kelish vaqti qayd etilmagan");
             }
@@ -117,7 +162,6 @@ class AttendanceController {
                 return response.error(res, "Bugun allaqachon ketgan", attendance);
             }
 
-            const employee = await Admin.findById(employee_id);
             const schedule = await this.getWorkSchedule();
 
             const workEndTime = this.parseTimeToDate(schedule.end_time);
@@ -149,6 +193,10 @@ class AttendanceController {
                 { new: true }
             ).populate("employee_id", "firstName lastName role");
 
+            // Update cache
+            this.scanCache.set(idCardNumber, { timestamp: new Date(), action: "checkout" });
+            this.cleanupCache();
+
             const workHours = Math.floor(totalWorkMinutes / 60);
             const workMinutes = totalWorkMinutes % 60;
 
@@ -167,11 +215,15 @@ class AttendanceController {
         }
     }
 
-    // NFC scan logic (using employee_id)
+    // NFC scan logic (using idCardNumber)
     static async nfcScan(req, res) {
         try {
-            const { employee_id } = req.body;
-            const employee = await Admin.findById(employee_id);
+            const { idCardNumber } = req.body;
+            if (!idCardNumber) {
+                return response.error(res, "idCardNumber kiritilishi shart");
+            }
+
+            const employee = await Admin.findOne({ idCardNumber });
             if (!employee) {
                 return response.notFound(res, "Ishchi topilmadi");
             }
@@ -182,9 +234,9 @@ class AttendanceController {
             }
 
             const today = new Date().toISOString().split("T")[0];
-            const attendance = await Attendance.findOne({ employee_id, date: today });
+            const attendance = await Attendance.findOne({ employee_id: employee._id, date: today });
 
-            const tempReq = { body: { employee_id } };
+            const tempReq = { params: { idCardNumber } };
 
             if (!attendance || !attendance.check_in_time) {
                 return this.checkIn(tempReq, res);
@@ -217,7 +269,7 @@ class AttendanceController {
             const targetDate = date || new Date().toISOString().split("T")[0];
 
             const attendances = await Attendance.find({ date: targetDate })
-                .populate("employee_id", "firstName lastName role specialization")
+                .populate("employee_id", "firstName lastName role specialization idCardNumber")
                 .sort({ check_in_time: 1 });
 
             const summary = {
@@ -238,19 +290,28 @@ class AttendanceController {
     // Employee history
     static async getEmployeeHistory(req, res) {
         try {
-            const { employee_id } = req.params;
+            const { idCardNumber } = req.params;
+            if (!idCardNumber) {
+                return response.error(res, "idCardNumber kiritilishi shart");
+            }
+
+            const employee = await Admin.findOne({ idCardNumber });
+            if (!employee) {
+                return response.notFound(res, "Ishchi topilmadi");
+            }
+
             const { start_date, end_date } = req.query;
 
-            const dateFilter = { employee_id };
+            const dateFilter = { employee_id: employee._id };
             if (start_date && end_date) {
                 dateFilter.date = { $gte: start_date, $lte: end_date };
             }
 
             const history = await Attendance.find(dateFilter)
-                .populate("employee_id", "firstName lastName role")
+                .populate("employee_id", "firstName lastName role idCardNumber")
                 .sort({ date: -1 });
 
-            return response.success(res, "Ishchi tarixi", { employee_id, history });
+            return response.success(res, "Ishchi tarixi", { idCardNumber, history });
         } catch (error) {
             console.error("Tarix xatosi:", error);
             return response.serverError(res, "Server xatosi", error.message);

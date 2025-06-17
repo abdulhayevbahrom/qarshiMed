@@ -99,7 +99,7 @@ class RoomController {
   // Xonani yangilash
   async updateRoom(req, res) {
     try {
-      console.log(req.body);
+
       const room = await Room.findByIdAndUpdate(req.params.id, req.body, {
         new: true,
       });

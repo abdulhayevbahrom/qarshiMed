@@ -303,6 +303,38 @@ class AdminController {
       return response.serverError(res, error.message, error);
     }
   }
+
+  async getTodayDoctors(req, res) {
+    try {
+      const { id } = req.params;
+      // Bugungi kunning boshlanishi va tugashi
+      const today = new Date();
+      const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+
+      // Bugun yaratilgan story lar va doctorId mavjud bo'lganlar
+      const todayStories = await storiesDB.find({
+        createdAt: { $gte: startOfDay, $lte: endOfDay },
+        patientId: id,
+        doctorId: { $ne: null },
+      });
+
+      // doctorId larni ajratib olish (bugun ishlagan doctorlar)
+      const doctorIdsWhoWorked = [...new Set(todayStories.map((story) => story.doctorId.toString()))];
+
+      // Admins dan role: doctor bo'lganlar ichidan bugun ishlamaganlarni olish
+      const doctors = await adminsDB
+        .find({
+          _id: { $nin: doctorIdsWhoWorked }, // $nin: bugun ishlamaganlarni oladi
+          role: "doctor",
+        })
+        .populate("servicesId"); // Populate the servicesId field
+
+      return response.success(res, "Bugun ishlamagan doctorlar", doctors);
+    } catch (error) {
+      return response.serverError(res, error.message, error);
+    }
+  }
 }
 
 module.exports = new AdminController();

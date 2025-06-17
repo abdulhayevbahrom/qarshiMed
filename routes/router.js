@@ -42,6 +42,7 @@ router.put("/admin/update/:id", adminValidation, adminController.updateAdmin);
 router.delete("/admin/delete/:id", adminController.deleteAdmin);
 router.put("/admin/:id/servicesId", adminController.updateServicesId);
 router.put("/admins/:adminId/room", adminController.updateRoomId);
+router.get("/doctors/:id", adminController.getTodayDoctors);
 
 /**
  * ============================
@@ -49,13 +50,10 @@ router.put("/admins/:adminId/room", adminController.updateRoomId);
  * ============================
  */
 router.post("/nfc-scan", AttendanceController.nfcScan);
-router.post("/check-in", AttendanceController.checkIn);
+router.post("/check-in/:idCardNumber", AttendanceController.checkIn);
 router.post("/check-out", AttendanceController.checkOut);
 router.get("/daily-report", AttendanceController.getDailyReport);
-router.get(
-  "/employee-history/:employee_id",
-  AttendanceController.getEmployeeHistory
-);
+router.get("/employee-history/:idCardNumber", AttendanceController.getEmployeeHistory);
 
 /**
  * ============================
@@ -94,6 +92,9 @@ router.put(
   upload.array("uploadedFiles"),
   storyController.visitPatient
 );
+router.get("/patientsStory", storyController.getAllPatientsStory);
+router.get("/patientsStory/:patientId", storyController.getPatientStoryById);
+router.get("/doctors/:doctorId/patientsStory", storyController.getPatientsStoryByDoctorId);
 
 /**
  * ============================

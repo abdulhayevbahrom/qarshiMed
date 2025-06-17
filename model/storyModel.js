@@ -87,9 +87,3 @@ const storySchema = new Schema(
 
 module.exports = model("stories", storySchema);
 
-//   diagnosis,
-//   prescription,
-//   recommendations,
-//   uploadedFiles,
-//   view: true,
-//   endTime: new Date().toISOString(),

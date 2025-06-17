@@ -194,7 +194,7 @@ class PatientController {
   async redirectPatient(req, res) {
     try {
       let { storyId, newDoctorId, services } = req.body;
-      console.log(storyId);
+
 
       let story = await storyDB.findById(storyId);
       if (!story) return response.notFound(res, "Story topilmadi");
@@ -204,7 +204,7 @@ class PatientController {
         redirectStatus: true,
         services: services,
       };
-      console.log(newStory);
+
 
       let result = await storyDB.create(newStory);
       if (!result) return response.notFound(res, "Story topilmadi");
