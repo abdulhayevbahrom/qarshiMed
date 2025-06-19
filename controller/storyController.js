@@ -1,10 +1,12 @@
 const response = require("../utils/response");
 const storyDB = require("../model/storyModel");
 const PatientModel = require("../model/patientModel");
+const Labaratory = require("../model/labaratoryModel");
 const RoomStoryModel = require("../model/roomStoryModel");
 const moment = require("moment");
 
 class StoryController {
+
   async getStory(req, res) {
     try {
       let filter = {};
@@ -301,24 +303,60 @@ class StoryController {
 
   async getAllPatientsStory(req, res) {
     try {
-      const patients = await PatientModel.find()
+      const patients = await PatientModel.find().lean().exec();
+      const patientIds = patients.map((patient) => patient._id);
+
+      // Populate doctorId and patientId in stories
+      const stories = await storyDB
+        .find({ patientId: { $in: patientIds } })
+        .populate("patientId") // Populate patientId
+        .populate("doctorId") // Populate doctorId
         .lean()
         .exec();
 
-      const patientIds = patients.map(patient => patient._id);
+      const storyIds = stories.map((story) => story._id);
 
-      const stories = await storyDB.find({ patientId: { $in: patientIds } })
+      // Populate storyId and its nested doctorId and patientId in laboratory results
+      const laboratoryResults = await Labaratory.find({
+        storyId: { $in: storyIds },
+      })
+        .populate({
+          path: "storyId",
+          populate: [
+            { path: "doctorId" }, // Nested populate for doctorId
+            { path: "patientId" }, // Nested populate for patientId
+          ],
+        })
         .lean()
         .exec();
 
-      const roomStories = await RoomStoryModel.find({ patientId: { $in: patientIds } })
+      // Attach laboratory results to stories
+      const storiesWithLab = stories.map((story) => ({
+        ...story,
+        laboratory: laboratoryResults.filter(
+          (lab) => lab.storyId._id.toString() === story._id.toString()
+        ),
+      }));
+
+      // Populate patientId and doctorId in roomStories
+      const roomStories = await RoomStoryModel.find({
+        patientId: { $in: patientIds },
+      })
+        .populate("patientId") // Populate patientId
+        .populate("doctorId") // Populate doctorId
+        .populate("roomId") // Optional: Populate roomId
         .lean()
         .exec();
 
-      const result = patients.map(patient => ({
+      const result = patients.map((patient) => ({
         ...patient,
-        stories: stories.filter(story => story.patientId.toString() === patient._id.toString()),
-        roomStories: roomStories.filter(roomStory => roomStory.patientId.toString() === patient._id.toString()),
+        stories: storiesWithLab.filter(
+          (story) => story.patientId._id.toString() === patient._id.toString()
+        ),
+        roomStories: roomStories.filter(
+          (roomStory) =>
+            roomStory.patientId._id.toString() === patient._id.toString()
+        ),
       }));
 
       return res.status(200).json({
@@ -334,14 +372,11 @@ class StoryController {
     }
   }
 
-  // Get patient by ID with their stories and room stories
   async getPatientStoryById(req, res) {
     try {
       const { patientId } = req.params;
 
-      const patient = await PatientModel.findById(patientId)
-        .lean()
-        .exec();
+      const patient = await PatientModel.findById(patientId).lean().exec();
 
       if (!patient) {
         return res.status(404).json({
@@ -350,17 +385,49 @@ class StoryController {
         });
       }
 
-      const stories = await storyDB.find({ patientId })
+      // Populate doctorId and patientId in stories
+      const stories = await storyDB
+        .find({ patientId })
+        .populate("patientId") // Populate patientId
+        .populate("doctorId") // Populate doctorId
         .lean()
         .exec();
 
+      const storyIds = stories.map((story) => story._id);
+
+      // Populate storyId and its nested doctorId and patientId in laboratory results
+      const laboratoryResults = await Labaratory.find({
+        storyId: { $in: storyIds },
+      })
+        .populate({
+          path: "storyId",
+          populate: [
+            { path: "doctorId" }, // Nested populate for doctorId
+            { path: "patientId" }, // Nested populate for patientId
+          ],
+        })
+        .lean()
+        .exec();
+
+      // Attach laboratory results to stories
+      const storiesWithLab = stories.map((story) => ({
+        ...story,
+        laboratory: laboratoryResults.filter(
+          (lab) => lab.storyId._id.toString() === story._id.toString()
+        ),
+      }));
+
+      // Populate patientId and doctorId in roomStories
       const roomStories = await RoomStoryModel.find({ patientId })
+        .populate("patientId") // Populate patientId
+        .populate("doctorId") // Populate doctorId
+        .populate("roomId") // Optional: Populate roomId
         .lean()
         .exec();
 
       const result = {
         ...patient,
-        stories,
+        stories: storiesWithLab,
         roomStories,
       };
 
@@ -377,23 +444,54 @@ class StoryController {
     }
   }
 
-  // Get all patients by doctor ID with their stories and room stories
   async getPatientsStoryByDoctorId(req, res) {
     try {
       const { doctorId } = req.params;
 
-      const stories = await storyDB.find({ doctorId })
+      // Populate patientId and doctorId in stories
+      const stories = await storyDB
+        .find({ doctorId })
+        .populate("patientId") // Populate patientId
+        .populate("doctorId") // Populate doctorId
         .lean()
         .exec();
 
+      const storyIds = stories.map((story) => story._id);
+
+      // Populate storyId and its nested doctorId and patientId in laboratory results
+      const laboratoryResults = await Labaratory.find({
+        storyId: { $in: storyIds },
+      })
+        .populate({
+          path: "storyId",
+          populate: [
+            { path: "doctorId" }, // Nested populate for doctorId
+            { path: "patientId" }, // Nested populate for patientId
+          ],
+        })
+        .lean()
+        .exec();
+
+      // Attach laboratory results to stories
+      const storiesWithLab = stories.map((story) => ({
+        ...story,
+        laboratory: laboratoryResults.filter(
+          (lab) => lab.storyId._id.toString() === story._id.toString()
+        ),
+      }));
+
+      // Populate patientId and doctorId in roomStories
       const roomStories = await RoomStoryModel.find({ doctorId })
+        .populate("patientId") // Populate patientId
+        .populate("doctorId") // Populate doctorId
+        .populate("roomId") // Optional: Populate roomId
         .lean()
         .exec();
 
       const patientIds = [
         ...new Set([
-          ...stories.map(story => story.patientId.toString()),
-          ...roomStories.map(roomStory => roomStory.patientId.toString()),
+          ...stories.map((story) => story.patientId._id.toString()),
+          ...roomStories.map((roomStory) => roomStory.patientId._id.toString()),
         ]),
       ];
 
@@ -401,22 +499,73 @@ class StoryController {
         .lean()
         .exec();
 
-      const result = patients.map(patient => ({
+      const result = patients.map((patient) => ({
         ...patient,
-        stories: stories.filter(story => story.patientId.toString() === patient._id.toString()),
-        roomStories: roomStories.filter(roomStory => roomStory.patientId.toString() === patient._id.toString()),
+        stories: storiesWithLab.filter(
+          (story) => story.patientId._id.toString() === patient._id.toString()
+        ),
+        roomStories: roomStories.filter(
+          (roomStory) =>
+            roomStory.patientId._id.toString() === patient._id.toString()
+        ),
       }));
+
+      if (!result.length)
+        return res.status(404).json({
+          success: false,
+          message: "Bemorlar topilmadi",
+        });
 
       return res.status(200).json({
         success: true,
+        message: "Bemorlar topildi",
         data: result,
       });
-    } catch (error) {
+    } catch (err) {
       return res.status(500).json({
         success: false,
-        message: "Error fetching patients by doctor",
-        error: error.message,
+        message: err.message,
+        error: err,
       });
+    }
+  }
+
+  //==========================================
+
+
+  async submitAnalis(req, res) {
+    try {
+      const { storyId, results } = req.body;
+
+      // Validate request body
+      if (!storyId || !Array.isArray(results) || results.length === 0) {
+        return response.badRequest(res, "Noto‘g‘ri so‘rov: storyId va bo‘sh bo‘lmagan results massivi talab qilinadi");
+      }
+
+      // Validate results array structure
+      const validResults = results.every(
+        (item) =>
+          item.key &&
+          item.name &&
+          item.result &&
+          typeof item.result === "string"
+      );
+
+      if (!validResults) {
+        return response.badRequest(res, "Noto‘g‘ri results formati: har bir element key, name va result (string sifatida) bo‘lishi kerak");
+      }
+
+      // Save to database using Labaratory model (corrected from PatientModel)
+      const labaratory = new Labaratory({
+        storyId,
+        results,
+      });
+
+      const result = await labaratory.save();
+
+      return response.success(res, "Maʼlumotlar muvaffaqiyatli saqlandi", result);
+    } catch (err) {
+      return response.serverError(res, err.message, err);
     }
   }
 }

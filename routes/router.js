@@ -92,6 +92,10 @@ router.put(
   upload.array("uploadedFiles"),
   storyController.visitPatient
 );
+router.post(
+  "/analis/submit",
+  storyController.submitAnalis
+);
 router.get("/patientsStory", storyController.getAllPatientsStory);
 router.get("/patientsStory/:patientId", storyController.getPatientStoryById);
 router.get("/doctors/:doctorId/patientsStory", storyController.getPatientsStoryByDoctorId);

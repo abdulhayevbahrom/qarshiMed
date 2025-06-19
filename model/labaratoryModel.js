@@ -11,8 +11,6 @@ const labaratorySchema = new Schema(
       {
         key: { type: String },
         name: { type: String },
-        price: { type: Number },
-        extraPrice: { type: Number },
         analis: { type: String },
         norma: { type: String },
         siBirlik: { type: String },
