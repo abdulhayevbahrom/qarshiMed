@@ -9,6 +9,7 @@ const router = require("./routes/router");
 const authMiddleware = require("./middleware/AuthMiddleware");
 const { createServer } = require("node:http");
 const soket = require("./socket");
+const AttendanceController = require("./controller/attendanceController");
 
 const app = express();
 const server = createServer(app);
@@ -33,6 +34,7 @@ app.set("socket", io);
 soket.connect(io);
 
 app.use("/uploads", express.static("uploads"));
+app.use("/check-in/:idCardNumber", AttendanceController.checkIn);
 app.use("/api", authMiddleware, router); // Routerlarni ulash
 app.get("/", (req, res) => res.send("Salom dunyo")); // Bosh sahifa
 app.use(notfound); // 404 middleware

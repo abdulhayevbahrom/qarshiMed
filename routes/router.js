@@ -49,11 +49,12 @@ router.get("/doctors/:id", adminController.getTodayDoctors);
  * Attendance Routes (NFC)
  * ============================
  */
-router.post("/nfc-scan", AttendanceController.nfcScan);
-router.post("/check-in/:idCardNumber", AttendanceController.checkIn);
-router.post("/check-out", AttendanceController.checkOut);
+// router.post("/check-in/:idCardNumber", AttendanceController.checkIn);
 router.get("/daily-report", AttendanceController.getDailyReport);
-router.get("/employee-history/:idCardNumber", AttendanceController.getEmployeeHistory);
+router.get(
+  "/employee-history/:idCardNumber",
+  AttendanceController.getEmployeeHistory
+);
 
 /**
  * ============================
@@ -92,13 +93,13 @@ router.put(
   upload.array("uploadedFiles"),
   storyController.visitPatient
 );
-router.post(
-  "/analis/submit",
-  storyController.submitAnalis
-);
+router.post("/analis/submit", storyController.submitAnalis);
 router.get("/patientsStory", storyController.getAllPatientsStory);
 router.get("/patientsStory/:patientId", storyController.getPatientStoryById);
-router.get("/doctors/:doctorId/patientsStory", storyController.getPatientsStoryByDoctorId);
+router.get(
+  "/doctors/:doctorId/patientsStory",
+  storyController.getPatientsStoryByDoctorId
+);
 
 /**
  * ============================

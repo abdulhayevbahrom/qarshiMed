@@ -5,7 +5,7 @@ const authMiddleware = async (req, res, next) => {
   try {
     let path = req.originalUrl;
 
-    let openRoutes = ["/api/admin/login", "/api/check-in"];
+    let openRoutes = ["/api/admin/login"];
     if (openRoutes.includes(path)) return next();
 
     const token = req?.headers?.authorization?.split(" ")[1];
