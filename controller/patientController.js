@@ -2,9 +2,127 @@ const response = require("../utils/response");
 const patientsDB = require("../model/patientModel");
 const storyDB = require("../model/storyModel");
 const adminDB = require("../model/adminModel");
+const expenseModel = require("../model/expenseModel");
 
 class PatientController {
+  // async createPatient(req, res) {
+  //   let io = req.app.get("socket");
+  //   try {
+  //     let {
+  //       firstname,
+  //       lastname,
+  //       idNumber,
+  //       phone,
+  //       address,
+  //       year,
+  //       gender,
+  //       paymentType,
+  //       payment_amount,
+  //       services, // Extract services from req.body
+  //       doctorId,
+  //       description,
+  //     } = req.body;
+
+  //     // Telefon raqami orqali bemorni qidirish
+  //     let patient = await patientsDB.findOne({ phone });
+  //     if (!patient) {
+  //       patient = await patientsDB.create({
+  //         firstname,
+  //         lastname,
+  //         idNumber,
+  //         phone,
+  //         address,
+  //         year,
+  //         gender,
+  //       });
+  //     }
+
+  //     // Validate doctorId
+  //     if (!doctorId) return response.error(res, "doctorId is required");
+
+  //     // Shu doktorga yozilgan, view: false bo'lgan storylarni sanash
+  //     const today = new Date();
+  //     today.setHours(0, 0, 0, 0);
+  //     const tomorrow = new Date(today);
+  //     tomorrow.setDate(today.getDate() + 1);
+
+  //     const count = await storyDB.countDocuments({
+  //       doctorId: doctorId,
+  //       view: 0,
+  //       createdAt: { $gte: today, $lt: tomorrow },
+  //     });
+
+  //     // order_number = navbat raqami
+  //     const orderNumber = count + 1;
+
+  //     let doctor = await adminDB.findById(doctorId);
+  //     if (!doctor) return response.error(res, "Doctor not found");
+
+  //     // Calculate total service price (if services provided)
+  //     const totalServicePrice = services.reduce(
+  //       (sum, service) => sum + service.price || 0
+  //     );
+
+  //     // Update payment_status logic (optional)
+  //     // Example: Check if payment_amount matches doctor's admission_price + service prices
+  //     const paymentStatus =
+  //       doctor &&
+  //       payment_amount === doctor &&
+  //       admission_price + totalServicePrice;
+
+  //     // Story yaratish
+  //     const story = await storyDB.create({
+  //       patientId: patient._id,
+  //       doctorId,
+  //       order_number: orderNumber,
+  //       paymentType,
+  //       payment_status: paymentStatus,
+  //       payment_amount,
+  //       services: services || [], // Save services to storyDB
+  //       description: description || "",
+  //     });
+
+  //     await expenseModel.create({
+  //       name: "Bemor to'lovi",
+  //       amount: payment_amount,
+  //       type:"kirim",
+  //       category:"Bemor to'lovi",
+  //       description: "Bemor to'lovi",
+  //       paymentType: paymentType,
+  //       relevantId: story._id,
+  //     })
+
+  //     io.emit("new_story", story);
+  //     return response.success(res, "Bemor va story muvaffaqiyatli yaratildi", {
+  //       patient: {
+  //         firstname,
+  //         lastname,
+  //         phone,
+  //         idNumber,
+  //         address,
+  //         order_number: orderNumber,
+  //         createdAt: story.createdAt,
+  //       },
+  //       doctor: {
+  //         firstName: doctor.firstName,
+  //         lastName: doctor.lastName,
+  //         specialization: doctor.specialization,
+  //         phone: phone,
+  //         admission_price: totalServicePrice,
+  //       },
+  //       services: services || [], // Return services in response
+  //     });
+  //   } catch (err) {
+  //     console.error("Error in createPatient:", err);
+  //     return response.serverError(res, "Server error occurred", err.message);
+  //   }
+  // }
+
   async createPatient(req, res) {
+    let io = req.app.get("socket");
+    const mongoose = require("mongoose");
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
       let {
         firstname,
@@ -16,27 +134,37 @@ class PatientController {
         gender,
         paymentType,
         payment_amount,
-        services, // Extract services from req.body
+        services,
         doctorId,
         description,
       } = req.body;
 
       // Telefon raqami orqali bemorni qidirish
-      let patient = await patientsDB.findOne({ phone });
+      let patient = await patientsDB.findOne({ phone }).session(session);
       if (!patient) {
-        patient = await patientsDB.create({
-          firstname,
-          lastname,
-          idNumber,
-          phone,
-          address,
-          year,
-          gender,
-        });
+        patient = await patientsDB.create(
+          [
+            {
+              firstname,
+              lastname,
+              idNumber,
+              phone,
+              address,
+              year,
+              gender,
+            },
+          ],
+          { session }
+        );
+        patient = patient[0];
       }
 
       // Validate doctorId
-      if (!doctorId) return response.error(res, "doctorId is required");
+      if (!doctorId) {
+        await session.abortTransaction();
+        session.endSession();
+        return response.error(res, "doctorId is required");
+      }
 
       // Shu doktorga yozilgan, view: false bo'lgan storylarni sanash
       const today = new Date();
@@ -44,42 +172,71 @@ class PatientController {
       const tomorrow = new Date(today);
       tomorrow.setDate(today.getDate() + 1);
 
-      const count = await storyDB.countDocuments({
-        doctorId: doctorId,
-        view: 0,
-        createdAt: { $gte: today, $lt: tomorrow },
-      });
+      const count = await storyDB
+        .countDocuments({
+          doctorId: doctorId,
+          view: 0,
+          createdAt: { $gte: today, $lt: tomorrow },
+        })
+        .session(session);
 
       // order_number = navbat raqami
       const orderNumber = count + 1;
 
-      let doctor = await adminDB.findById(doctorId);
-      if (!doctor) return response.error(res, "Doctor not found");
+      let doctor = await adminDB.findById(doctorId).session(session);
+      if (!doctor) {
+        await session.abortTransaction();
+        session.endSession();
+        return response.error(res, "Doctor not found");
+      }
 
       // Calculate total service price (if services provided)
-      const totalServicePrice = services.reduce(
-        (sum, service) => sum + service.price || 0
+      const totalServicePrice = (services || []).reduce(
+        (sum, service) => sum + (service.price || 0),
+        0
       );
 
-      // Update payment_status logic (optional)
-      // Example: Check if payment_amount matches doctor's admission_price + service prices
+      // To'g'ri payment_status hisoblash
       const paymentStatus =
-        doctor &&
-        payment_amount === doctor &&
-        admission_price + totalServicePrice;
+        payment_amount >= (doctor.admission_price || 0) + totalServicePrice;
 
       // Story yaratish
-      const story = await storyDB.create({
-        patientId: patient._id,
-        doctorId,
-        order_number: orderNumber,
-        paymentType,
-        payment_status: paymentStatus,
-        payment_amount,
-        services: services || [], // Save services to storyDB
-        description: description || "",
-      });
+      const story = await storyDB.create(
+        [
+          {
+            patientId: patient._id,
+            doctorId,
+            order_number: orderNumber,
+            paymentType,
+            payment_status: paymentStatus,
+            payment_amount,
+            services: services || [],
+            description: description || "",
+          },
+        ],
+        { session }
+      );
+      const createdStory = story[0];
 
+      await expenseModel.create(
+        [
+          {
+            name: "Bemor to'lovi",
+            amount: payment_amount,
+            type: "kirim",
+            category: "Bemor to'lovi",
+            description: "Bemor to'lovi",
+            paymentType: paymentType,
+            relevantId: createdStory._id,
+          },
+        ],
+        { session }
+      );
+
+      await session.commitTransaction();
+      session.endSession();
+
+      io.emit("new_story", createdStory);
       return response.success(res, "Bemor va story muvaffaqiyatli yaratildi", {
         patient: {
           firstname,
@@ -88,7 +245,7 @@ class PatientController {
           idNumber,
           address,
           order_number: orderNumber,
-          createdAt: story.createdAt,
+          createdAt: createdStory.createdAt,
         },
         doctor: {
           firstName: doctor.firstName,
@@ -97,9 +254,11 @@ class PatientController {
           phone: phone,
           admission_price: totalServicePrice,
         },
-        services: services || [], // Return services in response
+        services: services || [],
       });
     } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
       console.error("Error in createPatient:", err);
       return response.serverError(res, "Server error occurred", err.message);
     }
@@ -193,8 +352,8 @@ class PatientController {
 
   async redirectPatient(req, res) {
     try {
+      let io = req.app.get("socket");
       let { storyId, newDoctorId, services } = req.body;
-
 
       let story = await storyDB.findById(storyId);
       if (!story) return response.notFound(res, "Story topilmadi");
@@ -205,9 +364,9 @@ class PatientController {
         services: services,
       };
 
-
       let result = await storyDB.create(newStory);
       if (!result) return response.notFound(res, "Story topilmadi");
+      io.emit("new_story", result);
       return response.success(res, "Story yaratildi", result);
     } catch (err) {
       return response.serverError(res, err.message, err);

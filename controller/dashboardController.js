@@ -33,7 +33,7 @@ async function getDashboard(req, res) {
       });
 
       // Umumiy qabul qilgan bemorlar
-      const allStories = await RoomStory.find({ doctorId: doc._id });
+      const allStories = await Stories.find({ doctorId: doc._id });
 
       const periodCount = periodStories.length;
       const clientLength = allStories.length;

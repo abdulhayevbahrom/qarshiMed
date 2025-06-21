@@ -6,7 +6,6 @@ const RoomStoryModel = require("../model/roomStoryModel");
 const moment = require("moment");
 
 class StoryController {
-
   async getStory(req, res) {
     try {
       let filter = {};
@@ -123,13 +122,13 @@ class StoryController {
       const todayViewedCount = await storyDB.countDocuments({
         doctorId,
         view: true,
-        startTime: { $gte: today, $lt: tomorrow },
+        createdAt: { $gte: today, $lt: tomorrow },
       });
 
       const todayUnviewedCount = await storyDB.countDocuments({
         doctorId,
         view: false,
-        startTime: { $gte: today, $lt: tomorrow },
+        createdAt: { $gte: today, $lt: tomorrow },
       });
 
       // Ko‘rilmagan bemorlarni topamiz
@@ -532,14 +531,16 @@ class StoryController {
 
   //==========================================
 
-
   async submitAnalis(req, res) {
     try {
       const { storyId, results } = req.body;
 
       // Validate request body
       if (!storyId || !Array.isArray(results) || results.length === 0) {
-        return response.badRequest(res, "Noto‘g‘ri so‘rov: storyId va bo‘sh bo‘lmagan results massivi talab qilinadi");
+        return response.badRequest(
+          res,
+          "Noto‘g‘ri so‘rov: storyId va bo‘sh bo‘lmagan results massivi talab qilinadi"
+        );
       }
 
       // Validate results array structure
@@ -552,7 +553,10 @@ class StoryController {
       );
 
       if (!validResults) {
-        return response.badRequest(res, "Noto‘g‘ri results formati: har bir element key, name va result (string sifatida) bo‘lishi kerak");
+        return response.badRequest(
+          res,
+          "Noto‘g‘ri results formati: har bir element key, name va result (string sifatida) bo‘lishi kerak"
+        );
       }
 
       // Save to database using Labaratory model (corrected from PatientModel)
@@ -563,7 +567,11 @@ class StoryController {
 
       const result = await labaratory.save();
 
-      return response.success(res, "Maʼlumotlar muvaffaqiyatli saqlandi", result);
+      return response.success(
+        res,
+        "Maʼlumotlar muvaffaqiyatli saqlandi",
+        result
+      );
     } catch (err) {
       return response.serverError(res, err.message, err);
     }

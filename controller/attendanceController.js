@@ -7,68 +7,9 @@ const { login } = require("./adminController");
 let scanCache = new Map();
 let CACHE_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 class AttendanceController {
-  // Default attendance settings
-  static attendanceSettings = {
-    grace_period_minutes: 15,
-    early_leave_threshold_minutes: 30,
-    overtime_threshold_minutes: 30,
-  };
-
-  // Cache for NFC scans: Map<idCardNumber, { timestamp: Date, action: 'checkin' | 'checkout' }>
-
-  // Cache expiration time (10 minutes in milliseconds)
-
-  // Clean up expired cache entries
-  static cleanupCache() {
-    const now = new Date();
-    for (const [idCardNumber, { timestamp }] of scanCache.entries()) {
-      if (now - timestamp > CACHE_TIMEOUT) {
-        scanCache.delete(idCardNumber);
-      }
-    }
-  }
-
-  // Utility to get work schedule
-  static async getWorkSchedule() {
-    const clinic = await Clinic.findOne();
-    if (!clinic) {
-      throw new Error("Klinika topilmadi");
-    }
-
-    return {
-      start_time: clinic.work_schedule.start_time,
-      end_time: clinic.work_schedule.end_time,
-      work_days: clinic.work_schedule.work_days,
-      settings: this.attendanceSettings,
-    };
-  }
-
-  // Check if today is a work day
-  static isWorkDay(workDays) {
-    const today = new Date();
-    const dayNames = [
-      "sunday",
-      "monday",
-      "tuesday",
-      "wednesday",
-      "thursday",
-      "friday",
-      "saturday",
-    ];
-    return workDays.includes(dayNames[today.getDay()]);
-  }
-
-  // Parse time string (e.g., "08:00") to Date object for a given date
-  static parseTimeToDate(timeStr, baseDate = new Date()) {
-    const [hour, minute] = timeStr.split(":").map(Number);
-    const date = new Date(baseDate);
-    date.setHours(hour, minute, 0, 0);
-    return date;
-  }
-
-  // Check-in logic
   static async checkIn(req, res) {
     try {
+      let io = req.app.get("socket");
       const { idCardNumber } = req.params;
       if (!idCardNumber) {
         return response.error(res, "idCardNumber kiritilishi shart");
@@ -187,6 +128,7 @@ class AttendanceController {
         newAttendance._id
       ).populate("employee_id", "firstName lastName role");
 
+      io.emit("checkin", populatedAttendance);
       return response.created(
         res,
         `${employee.firstName} ${employee.lastName} muvaffaqiyatli keldi`,
@@ -198,7 +140,6 @@ class AttendanceController {
         }
       );
     } catch (error) {
-      console.error("Check-in xatosi:", error);
       return response.serverError(res, "Server xatosi", error.message);
     }
   }
