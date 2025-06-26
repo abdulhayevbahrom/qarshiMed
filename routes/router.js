@@ -27,6 +27,7 @@ const expenseValidation = require("../validation/expensesValidation");
 const dashboardController = require("../controller/dashboardController");
 const servicesController = require("../controller/services-crud");
 const NightShiftController = require("../controller/nightShiftController");
+const roomServicesController = require("../controller/roomServicescontroller");
 
 /**
  * ============================
@@ -192,5 +193,19 @@ router.get(
   NightShiftController.getNurseEarnings
 );
 router.get("/statistics/reports", NightShiftController.getNurseReports);
+
+// ============================
+// rooms services
+// ============================
+router.get("/roomservices/all", roomServicesController.getRoomServices);
+router.post("/roomservices/create", roomServicesController.createRoomServices);
+router.put(
+  "/roomservices/update/:id",
+  roomServicesController.updateRoomServices
+);
+router.delete(
+  "/roomservices/delete/:id",
+  roomServicesController.deleteRoomServices
+);
 
 module.exports = router;
