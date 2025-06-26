@@ -35,14 +35,17 @@ class RoomController {
     }
   }
 
-
   // Barcha xonalarni olish
   async getRooms(req, res) {
     try {
-      const rooms = await Room.find().populate("cleaner").populate("nurse").populate("doctorId").populate({
-        path: "capacity",
-        populate: [{ path: "patientId" }, { path: "doctorId" }],
-      });
+      const rooms = await Room.find()
+        .populate("cleaner")
+        .populate("nurse")
+        .populate("doctorId")
+        .populate({
+          path: "capacity",
+          populate: [{ path: "patientId" }, { path: "doctorId" }],
+        });
       if (!rooms.length) return response.notFound(res, "Xonalar topilmadi");
       return response.success(res, "Xonalar ro'yxati", rooms);
     } catch (err) {
@@ -99,7 +102,6 @@ class RoomController {
   // Xonani yangilash
   async updateRoom(req, res) {
     try {
-
       const room = await Room.findByIdAndUpdate(req.params.id, req.body, {
         new: true,
       });
@@ -116,10 +118,10 @@ class RoomController {
       const { isCleaned } = req.body;
 
       // Validate input
-      if (typeof isCleaned !== 'boolean') {
+      if (typeof isCleaned !== "boolean") {
         return res.status(400).json({
           success: false,
-          message: 'isCleaned must be a boolean value'
+          message: "isCleaned must be a boolean value",
         });
       }
 
@@ -128,25 +130,25 @@ class RoomController {
         id,
         { isCleaned },
         { new: true, runValidators: true }
-      ).select('isCleaned roomNumber name');
+      ).select("isCleaned roomNumber name");
 
       if (!updatedRoom) {
         return res.status(404).json({
           success: false,
-          message: 'Room not found'
+          message: "Room not found",
         });
       }
 
       return res.status(200).json({
         success: true,
-        message: 'Room clean status updated successfully',
-        data: updatedRoom
+        message: "Room clean status updated successfully",
+        data: updatedRoom,
       });
     } catch (error) {
       return res.status(500).json({
         success: false,
-        message: 'Server error',
-        error: error.message
+        message: "Server error",
+        error: error.message,
       });
     }
   }
@@ -419,7 +421,6 @@ class RoomController {
     }
   }
 
-
   async payForRoom(req, res) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -583,6 +584,24 @@ class RoomController {
     } catch (err) {
       await session.abortTransaction();
       session.endSession();
+      return response.serverError(res, err.message, err);
+    }
+  }
+
+  async getRoomStoriesforDoctor(req, res) {
+    try {
+      let data = await RoomStory.find({ choosedRoomServices: null })
+        .populate("patientId")
+        .populate("roomId")
+        .populate("doctorId")
+        .populate("payments.paymentType");
+
+      if (data.length === 0) {
+        return response.success(res, "Bemorlar mavjud emas", data);
+      }
+
+      return response.success(res, "Bemorlar mavjud", data);
+    } catch (err) {
       return response.serverError(res, err.message, err);
     }
   }

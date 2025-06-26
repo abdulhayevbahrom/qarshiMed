@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const roomSchema = new mongoose.Schema(
   {
     name: {
-      type: String
+      type: String,
     },
     roomNumber: {
       type: Number,
@@ -64,13 +64,13 @@ const roomSchema = new mongoose.Schema(
         "tualet_xonasi",
         "yuvinish_xonasi",
         "kislorod_xonasi",
-        "boshqa"
+        "boshqa",
       ],
-      default: "davolanish"
+      default: "davolanish",
     },
     isCleaned: {
       type: Boolean,
-      default: false
+      default: false,
     },
     // Har bir joy holatini alohida ko'rsatish
     beds: {
@@ -116,7 +116,7 @@ const roomSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ["luxury", "standard", "econom"],
+      enum: ["luxury", "pollux", "econom"],
     },
     closeRoom: {
       type: Boolean,

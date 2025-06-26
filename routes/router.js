@@ -28,7 +28,20 @@ const dashboardController = require("../controller/dashboardController");
 const servicesController = require("../controller/services-crud");
 const NightShiftController = require("../controller/nightShiftController");
 const roomServicesController = require("../controller/roomServicescontroller");
+const choosedRoomServicesController = require("../controller/choosedRoomServicesController");
 
+router.post(
+  "/room-services/assign",
+  choosedRoomServicesController.assignRoomServices
+);
+router.get(
+  "/room-services/:patientId",
+  choosedRoomServicesController.getPatientServices
+);
+router.post(
+  "/room-services/mark",
+  choosedRoomServicesController.markTreatmentDone
+);
 /**
  * ============================
  * Admin Routes
@@ -132,6 +145,7 @@ router.patch("/room/addPatient/:id", roomController.addPatientToRoom);
 router.post("/room/removePatient/:id", roomController.removePatientFromRoom);
 router.post("/room/pay", roomController.payForRoom);
 router.patch("/roomStory/changeDays", roomController.changeTreatingDays);
+router.get("/roomStory/for-doctor", roomController.getRoomStoriesforDoctor);
 
 /**
  * ============================

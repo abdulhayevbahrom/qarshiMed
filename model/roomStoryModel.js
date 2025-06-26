@@ -34,6 +34,11 @@ const roomStorySchema = new mongoose.Schema(
       },
     ],
     active: { type: Boolean, default: true },
+    choosedRoomServices: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "choosedRoomServices",
+      default: null,
+    },
   },
   {
     timestamps: true,

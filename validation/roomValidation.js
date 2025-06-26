@@ -125,7 +125,7 @@ const roomValidation = (req, res, next) => {
       },
       category: {
         type: "string",
-        enum: ["luxury", "standard", "econom"],
+        enum: ["luxury", "pollux", "econom"],
       },
       closeRoom: {
         type: "boolean",
@@ -154,7 +154,7 @@ const roomValidation = (req, res, next) => {
         doctorId: "Shifokor ID si noto'g'ri formatda",
         capacity: "Xona tarixi ID lari noto'g'ri formatda",
         pricePerDay: "Kunlik narx musbat son bo'lishi kerak",
-        category: "Kategoriya faqat luxury, standard yoki econom bo'lishi mumkin",
+        category: "Kategoriya faqat luxury, pollux yoki econom bo'lishi mumkin",
         closeRoom: "Xona yopiq holati boolean bo'lishi kerak",
         isCleaned: "Tozalangan holati boolean (true yoki false) bo'lishi kerak",
       },

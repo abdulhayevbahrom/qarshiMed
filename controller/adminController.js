@@ -9,7 +9,11 @@ class AdminController {
   // Barcha adminlarni olish (Read - All)
   async getAdmins(req, res) {
     try {
-      const admins = await adminsDB.find().select("-password").populate("roomId").populate("servicesId"); // Parolni chiqarmaslik uchun
+      const admins = await adminsDB
+        .find()
+        .select("-password")
+        .populate("roomId")
+        .populate("servicesId"); // Parolni chiqarmaslik uchun
       if (!admins.length) return response.notFound(res, "Adminlar topilmadi");
       response.success(res, "Barcha adminlar", admins);
     } catch (err) {
@@ -227,8 +231,6 @@ class AdminController {
     }
   }
 
-
-
   async updateServicesId(req, res) {
     try {
       const { id } = req.params; // Admin ID from URL params
@@ -257,13 +259,16 @@ class AdminController {
       }
 
       // Return success response
-      return response.success(res, "Services ID updated successfully", updatedAdmin);
+      return response.success(
+        res,
+        "Services ID updated successfully",
+        updatedAdmin
+      );
     } catch (error) {
       console.error("Error updating servicesId:", error);
       return response.error(res, "Server error", 500);
     }
   }
-
 
   async updateRoomId(req, res) {
     try {
@@ -272,18 +277,18 @@ class AdminController {
 
       // Validate adminId
       if (!mongoose.Types.ObjectId.isValid(adminId)) {
-        return response.error(res, "Invalid admin ID", 400);
+        return response.error(res, "Ba'zi malumotlar kiritilmadi", 400);
       }
 
       // Validate roomId (if provided)
       if (roomId && !mongoose.Types.ObjectId.isValid(roomId)) {
-        return response.error(res, "Invalid room ID", 400);
+        return response.error(res, "Ba'zi malumotlar kiritilmadi", 400);
       }
 
       // Check if admin exists
       const admin = await adminsDB.findById(adminId);
       if (!admin) {
-        return response.notFound(res, "Admin not found");
+        return response.notFound(res, "Admin topilmadi");
       }
 
       // Update roomId (allow null to unset the field)
@@ -294,12 +299,11 @@ class AdminController {
       const adminData = admin.toJSON();
       delete adminData.password;
 
-      return response.success(res, "Room ID updated successfully", {
+      return response.success(res, "Xona ID yangilandi", {
         adminId: admin._id,
         roomId: admin.roomId,
       });
     } catch (error) {
-      console.error("Error updating roomId:", error);
       return response.serverError(res, error.message, error);
     }
   }
@@ -320,7 +324,9 @@ class AdminController {
       });
 
       // doctorId larni ajratib olish (bugun ishlagan doctorlar)
-      const doctorIdsWhoWorked = [...new Set(todayStories.map((story) => story.doctorId.toString()))];
+      const doctorIdsWhoWorked = [
+        ...new Set(todayStories.map((story) => story.doctorId.toString())),
+      ];
 
       // Admins dan role: doctor bo'lganlar ichidan bugun ishlamaganlarni olish
       const doctors = await adminsDB
