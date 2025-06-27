@@ -373,7 +373,88 @@ class PatientController {
     }
   }
 
+  // async updateRedirectPatient(req, res) {
+  //   try {
+  //     const { storyId, paymentType, payment_amount } = req.body;
+
+  //     // Storyni topish va patient/doctor ma'lumotlarini populate qilish
+  //     const story = await storyDB
+  //       .findById(storyId)
+  //       .populate("patientId")
+  //       .populate("doctorId");
+  //     if (!story) return response.notFound(res, "Story topilmadi", "hatolik");
+
+  //     // Xizmatlar narxini hisoblash
+  //     const servicesPrice = (story.services || []).reduce(
+  //       (total, service) => total + (service.price || 0),
+  //       0
+  //     );
+
+  //     // Navbat raqamini hisoblash
+  //     const today = new Date();
+  //     today.setHours(0, 0, 0, 0);
+  //     const tomorrow = new Date(today);
+  //     tomorrow.setDate(today.getDate() + 1);
+
+  //     const count = await storyDB.countDocuments({
+  //       doctorId: story.doctorId._id,
+  //       view: false,
+  //       createdAt: { $gte: today, $lt: tomorrow },
+  //     });
+  //     const order_number = count + 1;
+
+  //     // Storyni yangilash
+  //     story.paymentType = paymentType;
+  //     story.payment_amount = payment_amount;
+  //     story.payment_status = payment_amount >= servicesPrice;
+  //     story.redirectStatus = false;
+  //     story.order_number = order_number;
+  //     await story.save();
+
+  //     await expenseModel.create(
+  //       [
+  //         {
+  //           name: "Bemor to'lovi",
+  //           amount: payment_amount,
+  //           type: "kirim",
+  //           category: "Bemor to'lovi",
+  //           description: "Bemor to'lovi",
+  //           paymentType: paymentType,
+  //           relevantId: story._id,
+  //         },
+  //       ],
+  //       { session }
+  //     );
+
+  //     return response.success(res, "Bemor va story muvaffaqiyatli yangilandi", {
+  //       patient: {
+  //         firstname: story.patientId.firstname,
+  //         lastname: story.patientId.lastname,
+  //         phone: story.patientId.phone,
+  //         idNumber: story.patientId.idNumber,
+  //         address: story.patientId.address,
+  //         order_number,
+  //         createdAt: story.createdAt,
+  //       },
+  //       doctor: {
+  //         firstName: story.doctorId.firstName,
+  //         lastName: story.doctorId.lastName,
+  //         specialization: story.doctorId.specialization,
+  //         phone: story.doctorId.phone,
+  //         admission_price: servicesPrice,
+  //       },
+  //       services: story.services || [],
+  //     });
+  //   } catch (err) {
+  //     console.error("Error in updateRedirectPatient:", err);
+  //     return response.serverError(res, err.message, err);
+  //   }
+  // }
+
   async updateRedirectPatient(req, res) {
+    const mongoose = require("mongoose");
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
       const { storyId, paymentType, payment_amount } = req.body;
 
@@ -381,8 +462,13 @@ class PatientController {
       const story = await storyDB
         .findById(storyId)
         .populate("patientId")
-        .populate("doctorId");
-      if (!story) return response.notFound(res, "Story topilmadi", "hatolik");
+        .populate("doctorId")
+        .session(session);
+      if (!story) {
+        await session.abortTransaction();
+        session.endSession();
+        return response.notFound(res, "Story topilmadi", "hatolik");
+      }
 
       // Xizmatlar narxini hisoblash
       const servicesPrice = (story.services || []).reduce(
@@ -396,11 +482,13 @@ class PatientController {
       const tomorrow = new Date(today);
       tomorrow.setDate(today.getDate() + 1);
 
-      const count = await storyDB.countDocuments({
-        doctorId: story.doctorId._id,
-        view: false,
-        createdAt: { $gte: today, $lt: tomorrow },
-      });
+      const count = await storyDB
+        .countDocuments({
+          doctorId: story.doctorId._id,
+          view: false,
+          createdAt: { $gte: today, $lt: tomorrow },
+        })
+        .session(session);
       const order_number = count + 1;
 
       // Storyni yangilash
@@ -409,7 +497,25 @@ class PatientController {
       story.payment_status = payment_amount >= servicesPrice;
       story.redirectStatus = false;
       story.order_number = order_number;
-      await story.save();
+      await story.save({ session });
+
+      await expenseModel.create(
+        [
+          {
+            name: "Bemor to'lovi",
+            amount: payment_amount,
+            type: "kirim",
+            category: "Bemor to'lovi",
+            description: "Bemor to'lovi",
+            paymentType: paymentType,
+            relevantId: story._id,
+          },
+        ],
+        { session }
+      );
+
+      await session.commitTransaction();
+      session.endSession();
 
       return response.success(res, "Bemor va story muvaffaqiyatli yangilandi", {
         patient: {
@@ -431,6 +537,8 @@ class PatientController {
         services: story.services || [],
       });
     } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
       console.error("Error in updateRedirectPatient:", err);
       return response.serverError(res, err.message, err);
     }
@@ -438,7 +546,10 @@ class PatientController {
 
   async getRedirectPatients(req, res) {
     try {
-      let allRedirectedPatients = await storyDB.find({ redirectStatus: true });
+      let allRedirectedPatients = await storyDB
+        .find({ redirectStatus: true })
+        .populate("patientId")
+        .populate("doctorId");
       if (allRedirectedPatients.length === 0) {
         return response.notFound(res, "Yo'naltirilgan bemorlar topilmadi");
       }

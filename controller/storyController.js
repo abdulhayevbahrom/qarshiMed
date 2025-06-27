@@ -129,11 +129,18 @@ class StoryController {
         doctorId,
         view: false,
         createdAt: { $gte: today, $lt: tomorrow },
+        payment_status: true,
+        redirectStatus: false,
       });
 
       // Ko‘rilmagan bemorlarni topamiz
       const stories = await storyDB
-        .find({ doctorId, view: false })
+        .find({
+          doctorId,
+          view: false,
+          payment_status: true,
+          redirectStatus: false,
+        })
         .populate("patientId")
         .sort({ startTime: 1 });
 

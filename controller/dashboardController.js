@@ -33,17 +33,20 @@ async function getDashboard(req, res) {
       });
 
       // Umumiy qabul qilgan bemorlar
-      const allStories = await Stories.find({ doctorId: doc._id });
+      const allStories = await Stories.find({
+        doctorId: doc._id,
+        payment_status: true,
+      });
 
       const periodCount = periodStories.length;
       const clientLength = allStories.length;
 
       const totalPrice = allStories.reduce(
-        (sum, s) => sum + (doc.admission_price || 0),
+        (sum, s) => sum + (s.payment_amount || 0),
         0
       );
       const periodPrice = periodStories.reduce(
-        (sum, s) => sum + (doc.admission_price || 0),
+        (sum, s) => sum + (s.payment_amount || 0),
         0
       );
 
@@ -76,6 +79,7 @@ async function getDashboard(req, res) {
     // storylarni o'z ichiga olgan hisobot
     const storiesLength = await Stories.countDocuments({
       createdAt: { $gte: startDate, $lte: endDate },
+      payment_status: true,
     });
 
     // O‘tgan oy boshlanishi va tugashi
@@ -283,10 +287,11 @@ async function getDashboard(req, res) {
 
     // Kunlik bemorlar soni (chart uchun)
     //=============================== KUNLIK BEMORLAR SONI CHART UCHN ===================================================
-    const dailyPatients = await RoomStory.aggregate([
+    const dailyPatients = await Stories.aggregate([
       {
         $match: {
           createdAt: { $gte: startDate, $lte: endDate },
+          payment_status: true,
         },
       },
       {
