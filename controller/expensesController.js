@@ -48,6 +48,29 @@ class ExpensesController {
       return response.serverError(res, err.message, err);
     }
   }
+
+  async updateExpense(req, res) {
+    try {
+      const { id } = req.params;
+      const expense = await Expense.findByIdAndUpdate(id, req.body);
+
+      if (!expense) return response.notFound(res, "Xarajat topilmadi");
+      return response.success(res, "Xarajat yangilandi", expense);
+    } catch (err) {
+      return response.serverError(res, err.message, err);
+    }
+  }
+
+  async deleteExpense(req, res) {
+    try {
+      const { id } = req.params;
+      const expense = await Expense.findByIdAndDelete(id);
+      if (!expense) return response.notFound(res, "Xarajat topilmadi");
+      return response.success(res, "Xarajat o'chirildi", expense);
+    } catch (err) {
+      return response.serverError(res, err.message, err);
+    }
+  }
 }
 
 module.exports = new ExpensesController();

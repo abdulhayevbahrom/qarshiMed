@@ -158,6 +158,9 @@ router.post(
   expenseController.createExpense
 );
 router.get("/expense/all", expenseController.getExpenses);
+// updateExpense &  deleteExpense
+router.put("/expense/update/:id", expenseController.updateExpense);
+router.delete("/expense/delete/:id", expenseController.deleteExpense);
 
 /**
  * ============================

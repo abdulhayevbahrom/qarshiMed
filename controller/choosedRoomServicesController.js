@@ -1,3 +1,5 @@
+
+// 2. Yangilangan Controller (roomServicesController.js)
 const ChoosedRoomServices = require("../model/choosedRoomServices");
 const response = require("../utils/response");
 const roomStoryModel = require("../model/roomStoryModel");
@@ -37,15 +39,18 @@ class RoomServicesController {
       return response.serverError(res, err.message, err);
     }
   }
-  // ✅ 2. Bemorning ma’lumotlarini olish
+
+  // ✅ 2. Bemorning ma'lumotlarini olish
   async getPatientServices(req, res) {
     try {
       const { patientId } = req.params;
 
       const data = await ChoosedRoomServices.findOne({
         roomStoryId: patientId,
-      }).populate("services.serviceId");
-
+      })
+        // .populate("serviceId")
+        .populate("services.serviceId", "name")
+        .populate("services.dailyTracking.workerId", "firstName lastName role");
       if (!data) return response.notFound(res, "Ma'lumot topilmadi");
 
       return response.success(res, "Bemor muolajalari", data);
@@ -54,10 +59,10 @@ class RoomServicesController {
     }
   }
 
-  // ✅ 3. Muolajani o‘sha kunga bajarildi deb belgilash
+  // ✅ 3. Muolajani o'sha kunga bajarildi deb belgilash yoki o'chirish
   async markTreatmentDone(req, res) {
     try {
-      const { patientId, serviceId, date } = req.body;
+      const { patientId, serviceId, date, workerId, action } = req.body;
 
       const choosed = await ChoosedRoomServices.findOne({
         roomStoryId: patientId,
@@ -74,22 +79,39 @@ class RoomServicesController {
       );
 
       if (!service)
-        return response.notFound(res, "Ko‘rsatilgan muolaja topilmadi");
+        return response.notFound(res, "Ko'rsatilgan muolaja topilmadi");
 
-      const exists = service.dailyTracking.some(
-        (d) => new Date(d).toDateString() === new Date(date).toDateString()
+      const targetDate = new Date(date);
+      const existingIndex = service.dailyTracking.findIndex(
+        (d) => new Date(d.date).toDateString() === targetDate.toDateString()
       );
 
-      if (!exists) {
-        service.dailyTracking.push(new Date(date));
-        await choosed.save();
+      if (action === "remove") {
+        // O'chirish
+        if (existingIndex !== -1) {
+          service.dailyTracking.splice(existingIndex, 1);
+          await choosed.save();
+          return response.success(res, "Muolaja belgilash o'chirildi", service);
+        } else {
+          return response.notFound(res, "O'chiriladigan muolaja topilmadi");
+        }
+      } else {
+        // Qo'shish
+        if (existingIndex === -1) {
+          service.dailyTracking.push({
+            date: targetDate,
+            workerId: workerId,
+          });
+          await choosed.save();
+          return response.success(res, "Muolaja kuni saqlandi", service);
+        } else {
+          return response.success(res, "Muolaja allaqachon belgilangan", service);
+        }
       }
-
-      return response.success(res, "Muolaja kuni saqlandi", service);
     } catch (err) {
       return response.serverError(res, err.message, err);
     }
   }
 }
 
-module.exports = new RoomServicesController();
+module.exports = new RoomServicesController;

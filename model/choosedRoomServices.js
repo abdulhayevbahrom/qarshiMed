@@ -1,3 +1,4 @@
+// 1. Yangilangan Schema (choosedRoomServices.js)
 const mongoose = require("mongoose");
 
 const choosedRoomServicesSchema = new mongoose.Schema(
@@ -14,6 +15,10 @@ const choosedRoomServicesSchema = new mongoose.Schema(
     },
     services: [
       {
+        workerId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Admins",
+        },
         serviceId: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "RoomServices",
@@ -30,7 +35,19 @@ const choosedRoomServicesSchema = new mongoose.Schema(
         },
         dailyTracking: [
           {
-            type: Date, // muolaja berilgan sana
+            date: {
+              type: Date,
+              required: true,
+            },
+            workerId: {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: "Admins",
+              required: true,
+            },
+            createdAt: {
+              type: Date,
+              default: Date.now,
+            },
           },
         ],
       },
@@ -41,7 +58,9 @@ const choosedRoomServicesSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model(
+const ChoosedRoomServices = mongoose.model(
   "ChoosedRoomServices",
   choosedRoomServicesSchema
 );
+
+module.exports = ChoosedRoomServices;
