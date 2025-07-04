@@ -1,7 +1,6 @@
 require("dotenv").config();
 const express = require("express");
 const connectDB = require("./config/dbConfig"); // yoki ./utils/connect
-
 const cors = require("cors");
 const PORT = process.env.PORT || 5000;
 const notfound = require("./middleware/notfound.middleware");
