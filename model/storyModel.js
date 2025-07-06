@@ -46,9 +46,29 @@ const storySchema = new Schema(
 
     // Retsept (davolash bo‘yicha yozuvlar)
     retsept: {
-      diagnosis: { type: String },
-      prescription: { type: String },
-      recommendations: { type: String },
+      diagnosis: { type: String, trim: true },
+      prescription: [
+        {
+          medicationName: { type: String, trim: true, required: true },
+          dosagePerDay: { type: Number, min: 0 },
+          durationDays: { type: Number, min: 0 },
+          description: { type: String, trim: true },
+          doseTracking: [
+            {
+              day: { type: Number, min: 1 }, // Day number (1 to durationDays)
+              doseNumber: { type: Number, min: 1 }, // Dose number for that day (1 to dosagePerDay)
+              taken: { type: Boolean, default: false },
+              timestamp: { type: Date },
+              workerId: {
+                type: Types.ObjectId,
+                ref: "Admins",
+              },
+            },
+          ],
+          _id: false,
+        },
+      ],
+      recommendations: { type: String, trim: true },
     },
 
     labaratoryResult: {
@@ -86,4 +106,6 @@ const storySchema = new Schema(
 );
 
 module.exports = model("stories", storySchema);
+
+
 

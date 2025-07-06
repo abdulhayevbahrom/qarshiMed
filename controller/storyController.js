@@ -42,6 +42,34 @@ class StoryController {
     }
   }
 
+  async getStoryByPatientAndDoctor(req, res) {
+    try {
+      const { patientId, doctorId } = req.params;
+
+      // Validate required parameters
+      if (!patientId || !doctorId) {
+        return response.badRequest(res, "Patient ID va Doctor ID talab qilinadi");
+      }
+
+      // Fetch the most recent story matching both patientId and doctorId
+      const story = await storyDB
+        .findOne({ patientId, doctorId })
+        .sort({ createdAt: -1 }) // Sort by createdAt in descending order to get the latest
+        .populate("patientId")
+        .populate("doctorId")
+        .lean()
+        .exec();
+
+      if (!story) {
+        return response.notFound(res, "Tashrif topilmadi");
+      }
+
+      return response.success(res, "Eng so‘nggi tashrif topildi", story);
+    } catch (err) {
+      return response.serverError(res, err.message, err);
+    }
+  }
+
   async getStoryByPatientId(req, res) {
     try {
       const stories = await storyDB
@@ -266,46 +294,92 @@ class StoryController {
     }
   }
 
+
+
   async visitPatient(req, res) {
     try {
-      const { diagnosis, prescription, recommendations, description } =
-        req.body;
+      const { diagnosis, prescriptions, recommendations, description } = req.body;
+      const { id } = req.params;
 
-      const files = req.files.map((file) => ({
+      // Validate required fields
+      if (!id) {
+        return response.badRequest(res, "Story ID is required");
+      }
+
+      // Parse prescriptions safely
+      let parsedPrescriptions = [];
+      if (prescriptions) {
+        try {
+          parsedPrescriptions = JSON.parse(prescriptions);
+          if (!Array.isArray(parsedPrescriptions)) {
+            return response.badRequest(res, "Prescriptions must be an array");
+          }
+        } catch (error) {
+          return response.badRequest(res, "Invalid prescriptions format");
+        }
+      }
+
+      // Validate and initialize doseTracking for each prescription
+      const validPrescriptions = parsedPrescriptions.map((p) => {
+        const dosagePerDay = Number(p.dosagePerDay) || 0;
+        const durationDays = Number(p.durationDays) || 0;
+        const doseTracking = [];
+
+        // Generate doseTracking entries for each day and dose
+        for (let day = 1; day <= durationDays; day++) {
+          for (let dose = 1; dose <= dosagePerDay; dose++) {
+            doseTracking.push({
+              day,
+              doseNumber: dose,
+              taken: false,
+              timestamp: null,
+            });
+          }
+        }
+
+        return {
+          medicationName: p.medicationName?.trim() || "",
+          dosagePerDay,
+          durationDays,
+          description: p.description?.trim() || "",
+          doseTracking,
+        };
+      });
+
+      // Process uploaded files
+      const files = req.files?.map((file) => ({
         filename: file.originalname,
         url: file.path,
-      }));
+      })) || [];
 
-      // Mana shu yerda bemorga qo‘shiladi
-      const retsept = {
-        diagnosis,
-        prescription,
-        recommendations,
-      };
-
+      // Update story with optimized fields
       const story = await storyDB.findByIdAndUpdate(
-        req.params.id,
+        id,
         {
-          view: true,
-          endTime: new Date(),
-          retsept,
-          description,
-          files,
+          $set: {
+            view: true,
+            endTime: new Date(),
+            retsept: {
+              diagnosis: diagnosis?.trim() || "",
+              prescription: validPrescriptions,
+              recommendations: recommendations?.trim() || "",
+            },
+            description: description?.trim() || "",
+            files,
+          },
         },
-        { new: true }
+        { new: true, runValidators: true }
       );
 
       if (!story) {
-        return response.notFound(res, "Tashrif topilmadi");
+        return response.notFound(res, "Story not found");
       }
 
-      return response.success(res, "Tashrif ko‘rib chiqildi", story);
+      return response.success(res, "Visit completed successfully", story);
     } catch (err) {
       return response.serverError(res, err.message, err);
     }
   }
-
-  //==========================================
 
   async getAllPatientsStory(req, res) {
     try {
@@ -583,6 +657,64 @@ class StoryController {
       return response.serverError(res, err.message, err);
     }
   }
+
+  // =========================================
+
+  async updateDoseTaken(req, res) {
+    try {
+      const { storyId, prescriptionIndex, doseTrackingIndex, workerId } = req.params;
+
+      // Validate required parameters
+      if (!storyId || prescriptionIndex === undefined || doseTrackingIndex === undefined) {
+        return response.badRequest(res, "Story ID, prescription index, va dose tracking index talab qilinadi");
+      }
+
+      // Find the story by ID
+      const story = await storyDB.findById(storyId);
+      if (!story) {
+        return response.notFound(res, "Tashrif topilmadi");
+      }
+
+      // Check if prescription and doseTracking exist
+      const prescription = story.retsept.prescription[prescriptionIndex];
+      if (!prescription) {
+        return response.badRequest(res, "Retsept topilmadi");
+      }
+
+      const dose = prescription.doseTracking[doseTrackingIndex];
+      if (!dose) {
+        return response.badRequest(res, "Dose tracking topilmadi");
+      }
+
+      // Toggle the taken status and update timestamp if taken is set to true
+      dose.taken = !dose.taken;
+      if (dose.taken) {
+        dose.timestamp = new Date();
+        // Save workerId if provided
+        if (workerId) {
+          dose.workerId = workerId;
+        }
+      } else {
+        dose.timestamp = null; // Clear timestamp when untaken
+        // Clear workerId when untaken, if it exists
+        if (dose.workerId) {
+          dose.workerId = null;
+        }
+      }
+
+      // Save the updated story
+      await story.save();
+
+      return response.success(res, "Dose taken holati yangilandi", {
+        medicationName: prescription.medicationName,
+        doseTracking: prescription.doseTracking,
+      });
+    } catch (err) {
+      return response.serverError(res, err.message, err);
+    }
+  }
+
+
 }
 
 module.exports = new StoryController();

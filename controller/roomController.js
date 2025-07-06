@@ -66,30 +66,29 @@ class RoomController {
           { path: "patientId", model: "patients" },
           { path: "roomId", model: "Room" },
           { path: "doctorId", model: "Admins" },
+          // { path: "choosedRoomServices", model: "ChoosedRoomServices", },
+          {
+            path: "choosedRoomServices",
+            model: "ChoosedRoomServices",
+            populate: {
+              path: "services.serviceId",
+              model: "RoomServices", // Adjust model name if different
+            },
+          },
+          {
+            path: "storiesId",
+            model: "stories",
+            // SHART: Agar storiesId mavjud bo‘lsa, chuqur populate qil
+            populate: {
+              path: "retsept.prescription.doseTracking.workerId",
+              model: "Admins",
+            },
+          },
         ],
       });
 
       if (!room) {
         return response.notFound(res, "Xona topilmadi");
-      }
-
-      // Debug: Check if population worked
-      if (room.capacity.length > 0) {
-        room.capacity.forEach((story, index) => {
-          if (!story.patientId || !story.patientId._id) {
-            console.error(
-              `Population failed for patientId in capacity ${index}`
-            );
-          }
-          if (!story.roomId || !story.roomId._id) {
-            console.error(`Population failed for roomId in capacity ${index}`);
-          }
-          if (story.doctorId && !story.doctorId._id) {
-            console.error(
-              `Population failed for doctorId in capacity ${index}`
-            );
-          }
-        });
       }
 
       return response.success(res, "Xona topildi", room);
@@ -98,6 +97,7 @@ class RoomController {
       return response.serverError(res, err.message, err);
     }
   }
+
 
   // Xonani yangilash
   async updateRoom(req, res) {
@@ -182,7 +182,7 @@ class RoomController {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-      const { patientId, treatingDays, doctorId } = req.body;
+      const { patientId, treatingDays, doctorId, storiesId } = req.body;
       if (!patientId) {
         await session.abortTransaction();
         session.endSession();
@@ -270,6 +270,7 @@ class RoomController {
             paidDays,
             payments: [],
             active: true,
+            storiesId
           },
         ],
         { session }
@@ -324,24 +325,13 @@ class RoomController {
         .populate({ path: "patientId", model: "patients" })
         .populate({ path: "roomId", model: "Room" })
         .populate({ path: "doctorId", model: "Admins" })
+        .populate({ path: "storiesId", model: "stories" })
         .sort({ createdAt: -1 });
 
       if (!stories.length) {
         return response.notFound(res, "Room story topilmadi");
       }
 
-      // Debug: Check if population worked
-      stories.forEach((story, index) => {
-        if (!story.patientId || !story.patientId._id) {
-          console.error(`Population failed for patientId in story ${index}`);
-        }
-        if (!story.roomId || !story.roomId._id) {
-          console.error(`Population failed for roomId in story ${index}`);
-        }
-        if (story.doctorId && !story.doctorId._id) {
-          console.error(`Population failed for doctorId in story ${index}`);
-        }
-      });
 
       return response.success(res, "Room storylar ro'yxati", stories);
     } catch (err) {
@@ -590,11 +580,13 @@ class RoomController {
 
   async getRoomStoriesforDoctor(req, res) {
     try {
-      let data = await RoomStory.find({ choosedRoomServices: null })
+      let data = await RoomStory.find()
         .populate("patientId")
         .populate("roomId")
         .populate("doctorId")
-        .populate("payments.paymentType");
+        .populate("payments.paymentType")
+        .populate("storiesId");
+
 
       if (data.length === 0) {
         return response.success(res, "Bemorlar mavjud emas", data);

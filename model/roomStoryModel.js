@@ -33,6 +33,10 @@ const roomStorySchema = new mongoose.Schema(
         date: { type: Date, default: Date.now },
       },
     ],
+    storiesId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "stories",
+    },
     active: { type: Boolean, default: true },
     choosedRoomServices: {
       type: mongoose.Schema.Types.ObjectId,

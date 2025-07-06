@@ -42,6 +42,15 @@ router.post(
   "/room-services/mark",
   choosedRoomServicesController.markTreatmentDone
 );
+
+router.put(
+  "/room-services/update",
+  choosedRoomServicesController.updateChoosedServices
+);
+
+
+
+
 /**
  * ============================
  * Admin Routes
@@ -114,7 +123,9 @@ router.get(
   "/doctors/:doctorId/patientsStory",
   storyController.getPatientsStoryByDoctorId
 );
-
+//getStoryByPatientAndDoctor
+router.get("/story/patient/:patientId/doctor/:doctorId", storyController.getStoryByPatientAndDoctor);
+router.put("/stories/:storyId/prescription/:prescriptionIndex/dose/:doseTrackingIndex/workerId/:workerId", storyController.updateDoseTaken)
 /**
  * ============================
  * Clinic Info Routes
