@@ -98,7 +98,6 @@ class RoomController {
     }
   }
 
-
   // Xonani yangilash
   async updateRoom(req, res) {
     try {
@@ -270,7 +269,7 @@ class RoomController {
             paidDays,
             payments: [],
             active: true,
-            storiesId
+            storiesId,
           },
         ],
         { session }
@@ -278,6 +277,14 @@ class RoomController {
 
       // Add roomStory._id to room capacity
       room.capacity.push(roomStory._id);
+
+      const emptyBedIndex = room.beds.findIndex(
+        (bed) => bed.status === "bo'sh" || bed.status === "toza"
+      );
+
+      // Joyni band qilish
+      room.beds[emptyBedIndex].status = "band";
+
       await room.save({ session });
 
       // Populate the RoomStory
@@ -331,7 +338,6 @@ class RoomController {
       if (!stories.length) {
         return response.notFound(res, "Room story topilmadi");
       }
-
 
       return response.success(res, "Room storylar ro'yxati", stories);
     } catch (err) {
@@ -388,9 +394,7 @@ class RoomController {
       room.capacity = room.capacity.filter((id) => id.toString() !== patientId);
 
       // Beds arrayida "toza" yoki "bo'sh" statusli joyni topib, "toza emas" qilamiz
-      const bedToUpdate = room.beds.find(
-        (bed) => bed.status === "toza" || bed.status === "bo'sh"
-      );
+      const bedToUpdate = room.beds.find((bed) => bed.status === "band");
       if (bedToUpdate) {
         bedToUpdate.status = "toza emas";
       }
@@ -586,7 +590,6 @@ class RoomController {
         .populate("doctorId")
         .populate("payments.paymentType")
         .populate("storiesId");
-
 
       if (data.length === 0) {
         return response.success(res, "Bemorlar mavjud emas", data);
