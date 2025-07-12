@@ -48,7 +48,10 @@ class StoryController {
 
       // Validate required parameters
       if (!patientId || !doctorId) {
-        return response.badRequest(res, "Patient ID va Doctor ID talab qilinadi");
+        return response.badRequest(
+          res,
+          "Patient ID va Doctor ID talab qilinadi"
+        );
       }
 
       // Fetch the most recent story matching both patientId and doctorId
@@ -294,11 +297,15 @@ class StoryController {
     }
   }
 
-
-
   async visitPatient(req, res) {
     try {
-      const { diagnosis, prescriptions, recommendations, description } = req.body;
+      const {
+        diagnosis,
+        prescriptions,
+        recommendations,
+        description,
+        reabilitationServices,
+      } = req.body;
       const { id } = req.params;
 
       // Validate required fields
@@ -347,10 +354,11 @@ class StoryController {
       });
 
       // Process uploaded files
-      const files = req.files?.map((file) => ({
-        filename: file.originalname,
-        url: file.path,
-      })) || [];
+      const files =
+        req.files?.map((file) => ({
+          filename: file.originalname,
+          url: file.path,
+        })) || [];
 
       // Update story with optimized fields
       const story = await storyDB.findByIdAndUpdate(
@@ -365,6 +373,7 @@ class StoryController {
               recommendations: recommendations?.trim() || "",
             },
             description: description?.trim() || "",
+            reabilitationServices: JSON.parse(reabilitationServices) || [],
             files,
           },
         },
@@ -391,6 +400,7 @@ class StoryController {
         .find({ patientId: { $in: patientIds } })
         .populate("patientId") // Populate patientId
         .populate("doctorId") // Populate doctorId
+        .populate("reabilitationServices.serviceId") // Populate reabilitationServices.service
         .lean()
         .exec();
 
@@ -662,11 +672,19 @@ class StoryController {
 
   async updateDoseTaken(req, res) {
     try {
-      const { storyId, prescriptionIndex, doseTrackingIndex, workerId } = req.params;
+      const { storyId, prescriptionIndex, doseTrackingIndex, workerId } =
+        req.params;
 
       // Validate required parameters
-      if (!storyId || prescriptionIndex === undefined || doseTrackingIndex === undefined) {
-        return response.badRequest(res, "Story ID, prescription index, va dose tracking index talab qilinadi");
+      if (
+        !storyId ||
+        prescriptionIndex === undefined ||
+        doseTrackingIndex === undefined
+      ) {
+        return response.badRequest(
+          res,
+          "Story ID, prescription index, va dose tracking index talab qilinadi"
+        );
       }
 
       // Find the story by ID
@@ -713,8 +731,6 @@ class StoryController {
       return response.serverError(res, err.message, err);
     }
   }
-
-
 }
 
 module.exports = new StoryController();

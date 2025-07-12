@@ -99,6 +99,26 @@ const storySchema = new Schema(
       type: Boolean,
       default: false,
     },
+    // bu yotib davolanmaydigan bemorlar uchun qo‘shiladi
+    // agar yotib davolansa choosedRoomServices ga qo‘shiladi
+    reabilitationServices: [
+      {
+        serviceId: {
+          type: Types.ObjectId,
+          ref: "RoomServices",
+          required: true,
+        },
+        part: {
+          type: String,
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
+      },
+    ],
   },
   {
     timestamps: true,
@@ -106,6 +126,3 @@ const storySchema = new Schema(
 );
 
 module.exports = model("stories", storySchema);
-
-
-

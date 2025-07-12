@@ -35,6 +35,10 @@ router.post(
   choosedRoomServicesController.assignRoomServices
 );
 router.get(
+  "/room-services/patient/:patientId",
+  choosedRoomServicesController.getPatientServicesByPatientId
+);
+router.get(
   "/room-services/:patientId",
   choosedRoomServicesController.getPatientServices
 );
@@ -47,9 +51,6 @@ router.put(
   "/room-services/update",
   choosedRoomServicesController.updateChoosedServices
 );
-
-
-
 
 /**
  * ============================
@@ -124,8 +125,14 @@ router.get(
   storyController.getPatientsStoryByDoctorId
 );
 //getStoryByPatientAndDoctor
-router.get("/story/patient/:patientId/doctor/:doctorId", storyController.getStoryByPatientAndDoctor);
-router.put("/stories/:storyId/prescription/:prescriptionIndex/dose/:doseTrackingIndex/workerId/:workerId", storyController.updateDoseTaken)
+router.get(
+  "/story/patient/:patientId/doctor/:doctorId",
+  storyController.getStoryByPatientAndDoctor
+);
+router.put(
+  "/stories/:storyId/prescription/:prescriptionIndex/dose/:doseTrackingIndex/workerId/:workerId",
+  storyController.updateDoseTaken
+);
 /**
  * ============================
  * Clinic Info Routes
@@ -231,6 +238,7 @@ router.put(
   "/roomservices/update/:id",
   roomServicesController.updateRoomServices
 );
+
 router.delete(
   "/roomservices/delete/:id",
   roomServicesController.deleteRoomServices

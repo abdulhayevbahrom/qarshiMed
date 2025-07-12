@@ -1,4 +1,3 @@
-
 // 2. Yangilangan Controller (roomServicesController.js)
 const ChoosedRoomServices = require("../model/choosedRoomServices");
 const mongoose = require("mongoose");
@@ -58,6 +57,21 @@ class RoomServicesController {
       return response.serverError(res, err.message, err);
     }
   }
+  async getPatientServicesByPatientId(req, res) {
+    try {
+      const { patientId } = req.params;
+      const data = await ChoosedRoomServices.findOne({ patientId })
+        // .populate("serviceId")
+        .populate("services.serviceId", "name")
+        .populate("services.dailyTracking.workerId", "firstName lastName role");
+      if (!data) return response.notFound(res, "Ma'lumot topilmadi");
+
+      return response.success(res, "Bemor muolajalari", data);
+    } catch (err) {
+      logger.error("Error fetching patient services:", err);
+      return response.serverError(res, err.message, err);
+    }
+  }
 
   // ✅ 3. Muolajani o'sha kunga bajarildi deb belgilash yoki o'chirish
   async markTreatmentDone(req, res) {
@@ -105,14 +119,17 @@ class RoomServicesController {
           await choosed.save();
           return response.success(res, "Muolaja kuni saqlandi", service);
         } else {
-          return response.success(res, "Muolaja allaqachon belgilangan", service);
+          return response.success(
+            res,
+            "Muolaja allaqachon belgilangan",
+            service
+          );
         }
       }
     } catch (err) {
       return response.serverError(res, err.message, err);
     }
   }
-
 
   // ✅ 4. Bemorning muolajalarini yangilash
   // ✅ 4. Bemorning muolajalarini yangilash
@@ -132,7 +149,10 @@ class RoomServicesController {
       if (!Array.isArray(services) || services.length === 0) {
         await session.abortTransaction();
         session.endSession();
-        return response.badRequest(res, "Services array is required and cannot be empty");
+        return response.badRequest(
+          res,
+          "Services array is required and cannot be empty"
+        );
       }
 
       // Validate services array
@@ -140,22 +160,34 @@ class RoomServicesController {
         if (!mongoose.isValidObjectId(service.serviceId)) {
           await session.abortTransaction();
           session.endSession();
-          return response.badRequest(res, `Invalid serviceId: ${service.serviceId}`);
+          return response.badRequest(
+            res,
+            `Invalid serviceId: ${service.serviceId}`
+          );
         }
         if (!service.part || typeof service.part !== "string") {
           await session.abortTransaction();
           session.endSession();
-          return response.badRequest(res, "Each service must have a valid part");
+          return response.badRequest(
+            res,
+            "Each service must have a valid part"
+          );
         }
         if (!Number.isInteger(service.quantity) || service.quantity < 1) {
           await session.abortTransaction();
           session.endSession();
-          return response.badRequest(res, "Each service must have a valid quantity (integer >= 1)");
+          return response.badRequest(
+            res,
+            "Each service must have a valid quantity (integer >= 1)"
+          );
         }
         if (service.workerId && !mongoose.isValidObjectId(service.workerId)) {
           await session.abortTransaction();
           session.endSession();
-          return response.badRequest(res, `Invalid workerId: ${service.workerId}`);
+          return response.badRequest(
+            res,
+            `Invalid workerId: ${service.workerId}`
+          );
         }
         if (Array.isArray(service.dailyTracking)) {
           for (const track of service.dailyTracking) {
@@ -167,7 +199,10 @@ class RoomServicesController {
             if (!mongoose.isValidObjectId(track.workerId)) {
               await session.abortTransaction();
               session.endSession();
-              return response.badRequest(res, `Invalid workerId in dailyTracking: ${track.workerId}`);
+              return response.badRequest(
+                res,
+                `Invalid workerId in dailyTracking: ${track.workerId}`
+              );
             }
           }
         }
@@ -186,16 +221,20 @@ class RoomServicesController {
 
       // Update services array
       existingAssignment.services = services.map((service) => ({
-        workerId: service.workerId ? new mongoose.Types.ObjectId(service.workerId) : undefined,
+        workerId: service.workerId
+          ? new mongoose.Types.ObjectId(service.workerId)
+          : undefined,
         serviceId: new mongoose.Types.ObjectId(service.serviceId),
         part: service.part,
         quantity: service.quantity,
         dailyTracking: service.dailyTracking
           ? service.dailyTracking.map((track) => ({
-            date: new Date(track.date),
-            workerId: new mongoose.Types.ObjectId(track.workerId),
-            createdAt: track.createdAt ? new Date(track.createdAt) : Date.now(),
-          }))
+              date: new Date(track.date),
+              workerId: new mongoose.Types.ObjectId(track.workerId),
+              createdAt: track.createdAt
+                ? new Date(track.createdAt)
+                : Date.now(),
+            }))
           : [],
       }));
 
