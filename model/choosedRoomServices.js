@@ -1,4 +1,3 @@
-// 1. Yangilangan Schema (choosedRoomServices.js)
 const mongoose = require("mongoose");
 
 const choosedRoomServicesSchema = new mongoose.Schema(
@@ -6,11 +5,12 @@ const choosedRoomServicesSchema = new mongoose.Schema(
     roomStoryId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "RoomStory",
-      required: true,
+      default: null,
+      // required: true,
     },
     patientId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Patient",
+      ref: "stories",
       required: true,
     },
     services: [
@@ -64,6 +64,3 @@ const ChoosedRoomServices = mongoose.model(
 );
 
 module.exports = ChoosedRoomServices;
-
-
-

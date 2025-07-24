@@ -101,24 +101,24 @@ const storySchema = new Schema(
     },
     // bu yotib davolanmaydigan bemorlar uchun qo‘shiladi
     // agar yotib davolansa choosedRoomServices ga qo‘shiladi
-    reabilitationServices: [
-      {
-        serviceId: {
-          type: Types.ObjectId,
-          ref: "RoomServices",
-          required: true,
-        },
-        part: {
-          type: String,
-          required: true,
-        },
-        quantity: {
-          type: Number,
-          required: true,
-          min: 1,
-        },
-      },
-    ],
+    // reabilitationServices: [
+    //   {
+    //     serviceId: {
+    //       type: Types.ObjectId,
+    //       ref: "RoomServices",
+    //       required: true,
+    //     },
+    //     part: {
+    //       type: String,
+    //       required: true,
+    //     },
+    //     quantity: {
+    //       type: Number,
+    //       required: true,
+    //       min: 1,
+    //     },
+    //   },
+    // ],
   },
   {
     timestamps: true,

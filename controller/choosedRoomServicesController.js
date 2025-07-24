@@ -132,7 +132,6 @@ class RoomServicesController {
   }
 
   // ✅ 4. Bemorning muolajalarini yangilash
-  // ✅ 4. Bemorning muolajalarini yangilash
   async updateChoosedServices(req, res) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -255,6 +254,109 @@ class RoomServicesController {
     } catch (err) {
       await session.abortTransaction();
       session.endSession();
+      return response.serverError(res, err.message, err);
+    }
+  }
+
+  // ✅ 5. yotmaydigan bemorlarni olish
+  async getUnassignedPatients(req, res) {
+    try {
+      const patients = await ChoosedRoomServices.find({
+        roomStoryId: { $in: [null, undefined] },
+      })
+        .populate({
+          path: "patientId",
+          select: "patientId",
+          populate: {
+            path: "patientId", // nested patientId
+            model: "patients", // model nomini to‘g‘ri yozing
+            select: "firstname lastname phone",
+          },
+        })
+        .populate("services.serviceId", "name")
+        .populate("services.dailyTracking.workerId", "firstName lastName role");
+
+      if (!patients.length) {
+        return response.notFound(res, "Bemorlar topilmadi");
+      }
+
+      return response.success(res, "Bemorlar olinadi", patients);
+    } catch (err) {
+      return response.serverError(res, err.message, err);
+    }
+  }
+
+  async getPatientServicesByStoryId(req, res) {
+    try {
+      const { patientId } = req.params;
+
+      const data = await ChoosedRoomServices.findOne({
+        patientId,
+      })
+        // .populate("serviceId")
+        .populate("services.serviceId", "name")
+        .populate("services.dailyTracking.workerId", "firstName lastName role");
+      if (!data) return response.notFound(res, "Ma'lumot topilmadi");
+
+      return response.success(res, "Bemor muolajalari", data);
+    } catch (err) {
+      return response.serverError(res, err.message, err);
+    }
+  }
+
+  async markTreatmentDoneByStoryId(req, res) {
+    try {
+      const { patientId, serviceId, date, workerId, action } = req.body;
+
+      const choosed = await ChoosedRoomServices.findOne({
+        patientId,
+      });
+
+      if (!choosed)
+        return response.notFound(
+          res,
+          "Bemorga biriktirilgan muolajalar topilmadi"
+        );
+
+      const service = choosed.services.find(
+        (s) => s.serviceId.toString() === serviceId
+      );
+
+      if (!service)
+        return response.notFound(res, "Ko'rsatilgan muolaja topilmadi");
+
+      const targetDate = new Date(date);
+      const existingIndex = service.dailyTracking.findIndex(
+        (d) => new Date(d.date).toDateString() === targetDate.toDateString()
+      );
+
+      if (action === "remove") {
+        // O'chirish
+        if (existingIndex !== -1) {
+          service.dailyTracking.splice(existingIndex, 1);
+          await choosed.save();
+          return response.success(res, "Muolaja belgilash o'chirildi", service);
+        } else {
+          return response.notFound(res, "O'chiriladigan muolaja topilmadi");
+        }
+      } else {
+        // Qo'shish
+        if (existingIndex === -1) {
+          service.dailyTracking.push({
+            date: targetDate,
+            workerId: workerId,
+          });
+          await choosed.save();
+          return response.success(res, "Muolaja kuni saqlandi", service);
+        } else {
+          return response.success(
+            res,
+            "Muolaja allaqachon belgilangan",
+            service
+          );
+        }
+      }
+    } catch (err) {
       return response.serverError(res, err.message, err);
     }
   }

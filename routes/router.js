@@ -30,6 +30,10 @@ const NightShiftController = require("../controller/nightShiftController");
 const roomServicesController = require("../controller/roomServicescontroller");
 const choosedRoomServicesController = require("../controller/choosedRoomServicesController");
 
+router.get(
+  "/room-services/unassigned",
+  choosedRoomServicesController.getUnassignedPatients
+);
 router.post(
   "/room-services/assign",
   choosedRoomServicesController.assignRoomServices
@@ -42,9 +46,19 @@ router.get(
   "/room-services/:patientId",
   choosedRoomServicesController.getPatientServices
 );
+
+router.get(
+  "/room-services-story/:patientId",
+  choosedRoomServicesController.getPatientServicesByStoryId
+);
+
 router.post(
   "/room-services/mark",
   choosedRoomServicesController.markTreatmentDone
+);
+router.post(
+  "/room-services-story/mark",
+  choosedRoomServicesController.markTreatmentDoneByStoryId
 );
 
 router.put(

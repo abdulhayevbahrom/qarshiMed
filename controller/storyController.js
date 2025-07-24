@@ -304,7 +304,7 @@ class StoryController {
         prescriptions,
         recommendations,
         description,
-        reabilitationServices,
+        // reabilitationServices,
       } = req.body;
       const { id } = req.params;
 
@@ -373,7 +373,7 @@ class StoryController {
               recommendations: recommendations?.trim() || "",
             },
             description: description?.trim() || "",
-            reabilitationServices: JSON.parse(reabilitationServices) || [],
+            // reabilitationServices: JSON.parse(reabilitationServices) || [],
             files,
           },
         },
@@ -400,7 +400,7 @@ class StoryController {
         .find({ patientId: { $in: patientIds } })
         .populate("patientId") // Populate patientId
         .populate("doctorId") // Populate doctorId
-        .populate("reabilitationServices.serviceId") // Populate reabilitationServices.service
+        // .populate("reabilitationServices.serviceId") // Populate reabilitationServices.service
         .lean()
         .exec();
 
