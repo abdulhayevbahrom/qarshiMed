@@ -294,7 +294,7 @@ class RoomServicesController {
         patientId,
       })
         // .populate("serviceId")
-        .populate("services.serviceId", "name")
+        .populate("services.serviceId")
         .populate("services.dailyTracking.workerId", "firstName lastName role");
       if (!data) return response.notFound(res, "Ma'lumot topilmadi");
 
