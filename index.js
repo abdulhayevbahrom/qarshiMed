@@ -26,6 +26,7 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
+
 (async () => {
   await connectDB();
 })();
